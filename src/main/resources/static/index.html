@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Local Grocery</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<h1>Local On-Demand Grocery System</h1>
+
+<section>
+    <h2>Add Category</h2>
+    <input type="text" id="categoryName" placeholder="Category name">
+    <button onclick="addCategory()">Add</button>
+    <ul id="categoryList"></ul>
+</section>
+
+<hr>
+
+<section>
+    <h2>Add Product</h2>
+    <input type="text" id="productName" placeholder="Product name">
+    <input type="number" id="productPrice" placeholder="Price">
+    <input type="number" id="productStock" placeholder="Stock">
+    <select id="categorySelect"></select>
+    <button onclick="addProduct()">Add</button>
+    <ul id="productList"></ul>
+</section>
+
+<script src="/js/app.js"></script>
+</body>
+</html>
