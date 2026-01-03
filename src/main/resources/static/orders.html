@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Orders - Local Grocery</title>
+    <link rel="stylesheet" href="/css/customer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<!-- Amazon-like Header -->
+<header class="amazon-header">
+    <div class="logo-container">
+        <a href="/shop.html" class="amazon-logo">
+            Local<span>Grocery</span>
+        </a>
+    </div>
+
+    <div class="location-container">
+        <i class="fas fa-map-marker-alt location-icon"></i>
+        <div>
+            <div style="font-size: 12px;">Deliver to</div>
+            <div style="font-weight: bold;">Nepal</div>
+        </div>
+    </div>
+
+    <div class="search-container">
+        <select class="search-select" id="searchCategory">
+            <option value="all">All Departments</option>
+        </select>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search your orders...">
+        <button class="search-button" onclick="searchOrders()">
+            <i class="fas fa-search"></i>
+        </button>
+    </div>
+
+    <nav class="header-nav">
+        <a href="/shop.html" class="nav-item" style="margin-right: 10px;">
+            <div style="font-size: 12px;">Continue</div>
+            <div style="font-weight: bold;">Shopping</div>
+        </a>
+
+        <div class="nav-item" style="margin-right: 10px;">
+            <div style="font-size: 12px;">Hello,</div>
+            <div style="font-weight: bold;" id="userGreeting">User</div>
+        </div>
+
+        <a href="/cart.html" class="nav-item cart-container">
+            <div style="font-size: 25px; position: relative;">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count" id="cartCount">0</span>
+            </div>
+            <div style="font-weight: bold; margin-top: -5px;">Cart</div>
+        </a>
+    </nav>
+</header>
+
+<!-- Main Content -->
+<div class="main-container">
+    <div class="cart-container-page">
+        <h1 class="cart-title">Your Orders</h1>
+
+        <!-- Orders Tabs -->
+        <div class="orders-tabs">
+            <button class="order-tab active" onclick="filterOrders('all')">All Orders</button>
+            <button class="order-tab" onclick="filterOrders('delivered')">Delivered</button>
+            <button class="order-tab" onclick="filterOrders('pending')">Pending</button>
+            <button class="order-tab" onclick="filterOrders('returns')">Returns & Refunds</button>
+        </div>
+
+        <!-- Return Policy Banner -->
+        <div class="return-policy-banner">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <i class="fas fa-shipping-fast" style="font-size: 24px; color: #ff9900;"></i>
+                <div>
+                    <h3 style="margin: 0; color: #232f3e;">Easy Returns with "NEPAL CAN MOVE FAST"</h3>
+                    <p style="margin: 5px 0 0 0; color: #565959;">
+                        Free return pickup within 7 days of delivery. Refunds processed in 2-3 business days.
+                    </p>
+                </div>
+            </div>
+            <button class="auth-button" onclick="showReturnPolicy()" style="padding: 8px 16px; white-space: nowrap;">
+                View Policy
+            </button>
+        </div>
+
+        <!-- Orders List -->
+        <div id="ordersList">
+            <!-- Orders will be loaded here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyOrders" style="display: none; text-align: center; padding: 50px;">
+            <i class="fas fa-box-open" style="font-size: 60px; color: #ddd; margin-bottom: 20px;"></i>
+            <h3>No orders yet</h3>
+            <p>Start shopping to see your orders here</p>
+            <a href="/shop.html" class="auth-button" style="display: inline-block; width: auto; padding: 10px 30px;">
+                Start Shopping
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Return Request Modal -->
+<div id="returnModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">Request Return</h2>
+            <button onclick="closeReturnModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">
+                &times;
+            </button>
+        </div>
+
+        <div class="return-item-details">
+            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                <div style="width: 80px; height: 80px; background: #f0f2f2; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-box" style="font-size: 40px; color: #999;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 5px 0;" id="returnItemName"></h4>
+                    <p style="margin: 0; color: #565959;" id="returnOrderInfo"></p>
+                    <p style="margin: 5px 0 0 0; color: #b12704; font-weight: bold;" id="returnItemPrice"></p>
+                </div>
+            </div>
+        </div>
+
+        <form id="returnForm">
+            <input type="hidden" id="returnOrderId">
+            <input type="hidden" id="returnItemId">
+
+            <div class="form-group">
+                <label class="form-label">Return Reason *</label>
+                <select class="form-input" id="returnReason" required>
+                    <option value="">Select a reason</option>
+                    <option value="DAMAGED">Damaged or defective item</option>
+                    <option value="WRONG">Wrong item received</option>
+                    <option value="EXPIRED">Expired product</option>
+                    <option value="UNWANTED">No longer needed</option>
+                    <option value="OTHER">Other reason</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Additional Details</label>
+                <textarea class="form-input" id="returnDescription" rows="3"
+                          placeholder="Please provide more details about the issue..."></textarea>
+            </div>
+
+            <div class="return-policy-note">
+                <i class="fas fa-info-circle" style="color: #007185;"></i>
+                <span style="font-size: 14px; color: #565959;">
+                    Return via <strong>"NEPAL CAN MOVE FAST"</strong>: Free pickup within 7 days. Refund issued after inspection.
+                </span>
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button type="button" class="auth-button" onclick="closeReturnModal()"
+                        style="background: #f0f2f2; color: #0f1111; flex: 1;">
+                    Cancel
+                </button>
+                <button type="submit" class="auth-button" style="flex: 2;">
+                    Submit Return Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Return Policy Modal -->
+<div id="policyModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; color: #232f3e;">NEPAL CAN MOVE FAST - Return Policy</h2>
+            <button onclick="closePolicyModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">
+                &times;
+            </button>
+        </div>
+
+        <div class="policy-sections">
+            <div class="policy-section">
+                <h3><i class="fas fa-shipping-fast" style="color: #ff9900;"></i> Easy Returns</h3>
+                <ul>
+                    <li>Free return pickup within 7 days of delivery</li>
+                    <li>Items must be in original condition with packaging</li>
+                    <li>Refunds processed within 2-3 business days after inspection</li>
+                </ul>
+            </div>
+
+            <div class="policy-section">
+                <h3><i class="fas fa-ban" style="color: #d93025;"></i> Non-Returnable Items</h3>
+                <ul>
+                    <li>Perishable goods (fruits, vegetables, dairy)</li>
+                    <li>Opened personal care products</li>
+                    <li>Items damaged due to customer mishandling</li>
+                </ul>
+            </div>
+
+            <div class="policy-section">
+                <h3><i class="fas fa-money-bill-wave" style="color: #007600;"></i> Refund Process</h3>
+                <ul>
+                    <li>Full refund for defective/wrong items</li>
+                    <li>Return shipping paid by Local Grocery</li>
+                    <li>Refund issued to original payment method</li>
+                </ul>
+            </div>
+
+            <div class="policy-note">
+                <p style="background: #f0f2f2; padding: 15px; border-radius: 4px; margin: 0;">
+                    <strong>Note:</strong> Our partner "NEPAL CAN MOVE FAST" will contact you for pickup scheduling.
+                    Keep the item ready with all accessories and packaging.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/js/orders.js"></script>
+</body>
+</html>

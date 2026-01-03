@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation - Local Grocery</title>
+    <link rel="stylesheet" href="/css/customer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<header class="amazon-header">
+    <div class="logo-container">
+        <a href="/shop.html" class="amazon-logo">
+            Local<span>Grocery</span>
+        </a>
+    </div>
+</header>
+
+<div class="main-container" style="text-align: center; padding: 50px 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <div style="font-size: 60px; color: var(--amazon-green); margin-bottom: 20px;">
+            <i class="fas fa-check-circle"></i>
+        </div>
+
+        <h1 style="font-size: 28px; margin-bottom: 15px; color: var(--amazon-green);">
+            Order Confirmed!
+        </h1>
+
+        <p style="font-size: 18px; margin-bottom: 30px; color: #565959;">
+            Thank you for your order. Your groceries will be delivered soon.
+        </p>
+
+        <div style="background: var(--amazon-light-gray); padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <div style="font-size: 14px; color: #565959; margin-bottom: 10px;">Order Number</div>
+            <div style="font-size: 24px; font-weight: bold;" id="orderId"></div>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <div style="font-size: 16px; color: #565959; margin-bottom: 15px;">
+                <i class="fas fa-clock"></i> Estimated Delivery: <strong>Today, 2-4 PM</strong>
+            </div>
+            <div style="font-size: 16px; color: #565959;">
+                <i class="fas fa-truck"></i> Delivery Method: <strong>Standard Delivery</strong>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <a href="/shop.html" style="padding: 12px 24px; background: var(--amazon-orange); color: black; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                Continue Shopping
+            </a>
+            <a href="#" onclick="viewOrderDetails()" style="padding: 12px 24px; background: white; color: var(--amazon-blue); text-decoration: none; border: 2px solid var(--amazon-blue); border-radius: 4px; font-weight: bold;">
+                View Order Details
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Get order ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('orderId');
+
+    if (orderId) {
+        document.getElementById('orderId').textContent = `#${orderId}`;
+    }
+
+    function viewOrderDetails() {
+        alert('Order details will be available soon in your account.');
+    }
+</script>
+</body>
+</html>

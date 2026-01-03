@@ -1,0 +1,81 @@
+<html>
+<head>
+<title>app.js</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+app.js</font>
+</center></td></tr></table>
+<pre><span class="s0">loadCategories();</span>
+<span class="s0">loadProducts();</span>
+
+<span class="s1">function </span><span class="s0">loadCategories() {</span>
+    <span class="s0">fetch(</span><span class="s2">'/api/categories'</span><span class="s0">)</span>
+        <span class="s0">.then(r =&gt; r.json())</span>
+        <span class="s0">.then(data =&gt; {</span>
+            <span class="s0">const list = document.getElementById(</span><span class="s2">'categoryList'</span><span class="s0">);</span>
+            <span class="s0">const select = document.getElementById(</span><span class="s2">'categorySelect'</span><span class="s0">);</span>
+            <span class="s0">list.innerHTML = </span><span class="s2">''</span><span class="s0">;</span>
+            <span class="s0">select.innerHTML = </span><span class="s2">''</span><span class="s0">;</span>
+            <span class="s0">data.forEach(c =&gt; {</span>
+                <span class="s0">const li = document.createElement(</span><span class="s2">'li'</span><span class="s0">);</span>
+                <span class="s0">li.innerText = c.name;</span>
+                <span class="s0">list.appendChild(li);</span>
+                <span class="s0">const opt = document.createElement(</span><span class="s2">'option'</span><span class="s0">);</span>
+                <span class="s0">opt.value = c.id;</span>
+                <span class="s0">opt.text = c.name;</span>
+                <span class="s0">select.appendChild(opt);</span>
+            <span class="s0">});</span>
+        <span class="s0">});</span>
+<span class="s0">}</span>
+
+<span class="s1">function </span><span class="s0">loadProducts() {</span>
+    <span class="s0">fetch(</span><span class="s2">'/api/products'</span><span class="s0">)</span>
+        <span class="s0">.then(r =&gt; r.json())</span>
+        <span class="s0">.then(data =&gt; {</span>
+            <span class="s0">const list = document.getElementById(</span><span class="s2">'productList'</span><span class="s0">);</span>
+            <span class="s0">list.innerHTML = </span><span class="s2">''</span><span class="s0">;</span>
+            <span class="s0">data.forEach(p =&gt; {</span>
+                <span class="s0">const li = document.createElement(</span><span class="s2">'li'</span><span class="s0">);</span>
+                <span class="s0">const price = </span><span class="s1">new </span><span class="s0">Intl.NumberFormat(</span><span class="s2">'en-NP'</span><span class="s0">).format(p.price);</span>
+                <span class="s0">li.innerText = `${p.name} | Rs. ${price} | Stock: ${p.stock} | ${p.category.name}`;</span>
+                <span class="s0">list.appendChild(li);</span>
+            <span class="s0">});</span>
+        <span class="s0">});</span>
+<span class="s0">}</span>
+
+<span class="s1">function </span><span class="s0">addCategory() {</span>
+    <span class="s0">const name = document.getElementById(</span><span class="s2">'categoryName'</span><span class="s0">).value;</span>
+    <span class="s0">fetch(</span><span class="s2">'/api/categories'</span><span class="s0">, {</span>
+        <span class="s0">method: </span><span class="s2">'POST'</span><span class="s0">,</span>
+        <span class="s0">headers: { </span><span class="s2">'Content-Type'</span><span class="s0">: </span><span class="s2">'application/json' </span><span class="s0">},</span>
+        <span class="s0">body: JSON.stringify({ name })</span>
+    <span class="s0">}).then(() =&gt; {</span>
+        <span class="s0">document.getElementById(</span><span class="s2">'categoryName'</span><span class="s0">).value = </span><span class="s2">''</span><span class="s0">;</span>
+        <span class="s0">loadCategories();</span>
+    <span class="s0">});</span>
+<span class="s0">}</span>
+
+<span class="s1">function </span><span class="s0">addProduct() {</span>
+    <span class="s0">const name = document.getElementById(</span><span class="s2">'productName'</span><span class="s0">).value;</span>
+    <span class="s0">const price = document.getElementById(</span><span class="s2">'productPrice'</span><span class="s0">).value;</span>
+    <span class="s0">const stock = document.getElementById(</span><span class="s2">'productStock'</span><span class="s0">).value;</span>
+    <span class="s0">const categoryId = document.getElementById(</span><span class="s2">'categorySelect'</span><span class="s0">).value;</span>
+    <span class="s0">fetch(</span><span class="s2">'/api/products'</span><span class="s0">, {</span>
+        <span class="s0">method: </span><span class="s2">'POST'</span><span class="s0">,</span>
+        <span class="s0">headers: { </span><span class="s2">'Content-Type'</span><span class="s0">: </span><span class="s2">'application/json' </span><span class="s0">},</span>
+        <span class="s0">body: JSON.stringify({ name, price, stock, categoryId })</span>
+    <span class="s0">}).then(() =&gt; {</span>
+        <span class="s0">loadProducts();</span>
+    <span class="s0">});</span>
+<span class="s0">}</span></pre>
+</body>
+</html>

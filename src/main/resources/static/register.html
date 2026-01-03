@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - Local Grocery</title>
+    <link rel="stylesheet" href="/css/customer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="auth-container">
+    <div class="auth-box">
+        <div class="auth-header">
+            <div class="auth-logo">
+                Local<span>Grocery</span>
+            </div>
+            <div class="auth-subtitle">Create your grocery shopping account</div>
+        </div>
+
+        <div class="auth-form">
+            <h1 class="auth-title">Create Account</h1>
+
+            <div class="form-group">
+                <label class="form-label">Your name</label>
+                <input type="text" class="form-input" id="name" placeholder="First and last name">
+                <div class="error-message" id="nameError"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="email" placeholder="Enter your email">
+                <div class="error-message" id="emailError"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="password-container">
+                    <input type="password" class="form-input" id="password" placeholder="At least 6 characters">
+                    <button type="button" class="password-toggle" id="togglePassword">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="error-message" id="passwordError"></div>
+                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                    <i class="fas fa-info-circle"></i> Passwords must be at least 6 characters.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Re-enter password</label>
+                <div class="password-container">
+                    <input type="password" class="form-input" id="confirmPassword" placeholder="Re-enter password">
+                    <button type="button" class="password-toggle" id="toggleConfirmPassword">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="error-message" id="confirmPasswordError"></div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Account Type</label>
+                <div class="role-select">
+                    <div class="role-option selected" data-role="CUSTOMER" onclick="selectRole('CUSTOMER')">
+                        <i class="fas fa-user" style="font-size: 24px; margin-bottom: 5px;"></i>
+                        <div>Customer</div>
+                    </div>
+                    <div class="role-option" data-role="DELIVERY" onclick="selectRole('DELIVERY')">
+                        <i class="fas fa-truck" style="font-size: 24px; margin-bottom: 5px;"></i>
+                        <div>Delivery</div>
+                    </div>
+                </div>
+                <input type="hidden" id="role" value="CUSTOMER">
+            </div>
+
+            <button class="auth-button" id="registerButton">
+                <span>Create your Local Grocery account</span>
+            </button>
+
+            <div class="terms-text">
+                By creating an account, you agree to Local Grocery's
+                <a href="#" class="terms-link">Conditions of Use</a> and
+                <a href="#" class="terms-link">Privacy Notice</a>.
+            </div>
+
+            <div class="auth-divider">
+                <span>Already have an account?</span>
+            </div>
+
+            <a href="/login.html" class="auth-button" style="background: #f0f2f2; color: #0f1111; text-align: center; text-decoration: none;">
+                Sign in to your account
+            </a>
+        </div>
+
+        <div class="auth-footer">
+            <a href="#" class="auth-link">Conditions of Use</a>
+            <span style="margin: 0 10px;">·</span>
+            <a href="#" class="auth-link">Privacy Notice</a>
+            <span style="margin: 0 10px;">·</span>
+            <a href="#" class="auth-link">Need Help?</a>
+        </div>
+    </div>
+</div>
+
+<script src="/js/register.js"></script>
+</body>
+</html>

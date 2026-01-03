@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - Local Grocery</title>
+    <link rel="stylesheet" href="/css/customer.css">
+    <style>
+        .admin-login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .admin-login-container h2 {
+            color: var(--amazon-blue);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .admin-credentials {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="admin-login-container">
+    <h2>Admin Login</h2>
+
+    <div class="admin-credentials">
+        <strong>Default Admin Credentials:</strong><br>
+        Email: admin@grocery.com<br>
+        Password: admin
+    </div>
+
+    <form id="adminLoginForm">
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="email" class="form-input" required>
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="password" class="form-input" required>
+        </div>
+
+        <button type="submit" class="auth-button" style="width: 100%;">
+            Login as Admin
+        </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <a href="/login.html" style="color: var(--amazon-orange);">
+            Back to Customer Login
+        </a>
+    </div>
+</div>
+
+<script>
+    document.getElementById('adminLoginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (response.ok) {
+                const user = await response.json();
+
+                if (user.role === 'ADMIN') {
+                    localStorage.setItem('user', JSON.stringify(user));
+                    window.location.href = '/admin.html';
+                } else {
+                    alert('Access denied. Admin privileges required.');
+                }
+            } else {
+                alert('Invalid credentials');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Login failed. Please try again.');
+        }
+    });
+
+    // Auto-fill admin credentials for testing
+    document.getElementById('email').value = 'admin@grocery.com';
+    document.getElementById('password').value = 'admin';
+</script>
+</body>
+</html>

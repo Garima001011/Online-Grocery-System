@@ -1,0 +1,533 @@
+// /js/delivery.js
+
+let user = null;
+let currentOrders = [];
+let selectedOrderId = null;
+
+document.addEventListener("DOMContentLoaded", () => {
+  user = JSON.parse(localStorage.getItem("user") || "null");
+
+  // Guard: must be DELIVERY
+  if (!user || user.role !== "DELIVERY") {
+    window.location.href = "/login.html";
+    return;
+  }
+
+  initDeliveryDashboard();
+});
+
+async function initDeliveryDashboard() {
+  updateUserGreeting();
+
+  // Delivery person info (header)
+  const infoEl = document.getElementById("deliveryPersonInfo");
+  if (infoEl) infoEl.innerText = user.vehicleType || "Standard";
+
+  updateAvailabilityButton();
+
+  await loadMyOrders();
+  await loadDeliveryStats();
+
+  // Auto-refresh every 30 seconds
+  setInterval(async () => {
+    await loadMyOrders();
+    if (selectedOrderId) {
+      const exists = currentOrders.find((o) => o.id === selectedOrderId);
+      if (exists) await showOrderDetails(selectedOrderId);
+    }
+  }, 30000);
+}
+
+function updateUserGreeting() {
+  const whoEl = document.getElementById("who");
+  const logoutLink = document.getElementById("logoutLink");
+
+  if (whoEl) whoEl.textContent = user.name || user.email || "Partner";
+  if (logoutLink) logoutLink.style.display = "inline";
+}
+
+async function loadMyOrders() {
+  try {
+    // Preferred: delivery endpoint
+    // If you have: GET /api/delivery/my-orders?deliveryPersonId=ID
+    let res = await fetch(`/api/delivery/my-orders?deliveryPersonId=${user.id}`);
+
+    // Fallback: older admin endpoint if you still use it
+    if (!res.ok) {
+      res = await fetch(`/api/admin/orders/assigned`);
+      if (!res.ok) throw new Error("Failed to load orders");
+      const all = await res.json();
+      currentOrders = (all || []).filter(
+        (o) => o.deliveryPerson && o.deliveryPerson.id === user.id
+      );
+    } else {
+      currentOrders = await res.json();
+    }
+
+    renderOrderList();
+    updateQuickStats();
+  } catch (e) {
+    console.error("Error loading orders:", e);
+    const countEl = document.getElementById("ordersCount");
+    if (countEl) {
+      countEl.innerHTML =
+        '<span style="color: #ef4444;">Failed to load orders</span>';
+    }
+  }
+}
+
+function renderOrderList() {
+  const list = document.getElementById("orderList");
+  const noOrdersMsg = document.getElementById("noOrdersMessage");
+  const quickStats = document.getElementById("quickStats");
+
+  if (!list || !noOrdersMsg || !quickStats) return;
+
+  if (!currentOrders || currentOrders.length === 0) {
+    list.innerHTML = "";
+    noOrdersMsg.style.display = "block";
+    quickStats.style.display = "none";
+    const countEl = document.getElementById("ordersCount");
+    if (countEl) countEl.innerText = "0 orders assigned";
+    return;
+  }
+
+  noOrdersMsg.style.display = "none";
+  quickStats.style.display = "grid";
+  list.innerHTML = "";
+
+  currentOrders.forEach((order) => {
+    const orderDate = new Date(order.createdAt).toLocaleDateString();
+    const itemCount = order.items ? order.items.length : 0;
+    const customerName = order.user ? order.user.name || order.user.email : "Unknown";
+
+    const el = document.createElement("div");
+    el.className = "order-item";
+    if (selectedOrderId === order.id) el.classList.add("selected");
+
+    el.onclick = () => selectOrder(order.id);
+
+    el.innerHTML = `
+      <div class="order-header">
+        <div>
+          <div class="order-id">#${order.id}</div>
+          <div class="order-meta">${orderDate} • ${itemCount} items • ${customerName}</div>
+        </div>
+        <div>
+          <span class="status-badge status-${String(order.status || "").toLowerCase()}">${order.status || "—"}</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+        <div style="font-weight:700;color:var(--amazon-orange);">Rs. ${formatNpr(order.total || 0)}</div>
+        <div style="font-size:12px;color:var(--text-secondary);">${formatTime(order.createdAt)}</div>
+      </div>
+    `;
+
+    list.appendChild(el);
+  });
+
+  const countEl = document.getElementById("ordersCount");
+  if (countEl) countEl.innerText = `${currentOrders.length} orders assigned`;
+}
+
+function updateQuickStats() {
+  const activeOrders = (currentOrders || []).filter(
+    (o) => o.status !== "DELIVERED" && o.status !== "CANCELLED"
+  ).length;
+
+  const todayStr = new Date().toDateString();
+  const todayOrders = (currentOrders || []).filter(
+    (o) => new Date(o.createdAt).toDateString() === todayStr
+  ).length;
+
+  const completedOrders = (currentOrders || []).filter(
+    (o) => o.status === "DELIVERED"
+  ).length;
+
+  const statActive = document.getElementById("statActive");
+  const statToday = document.getElementById("statToday");
+  const statCompleted = document.getElementById("statCompleted");
+  const statRating = document.getElementById("statRating");
+
+  if (statActive) statActive.innerText = activeOrders;
+  if (statToday) statToday.innerText = todayOrders;
+  if (statCompleted) statCompleted.innerText = completedOrders;
+  if (statRating) statRating.innerText = user.rating || "5.0";
+}
+
+function selectOrder(orderId) {
+  selectedOrderId = orderId;
+  renderOrderList();
+  showOrderDetails(orderId);
+}
+
+async function showOrderDetails(orderId) {
+  const order = (currentOrders || []).find((o) => o.id === orderId);
+  if (!order) return;
+
+  const noSel = document.getElementById("noOrderSelected");
+  const details = document.getElementById("orderDetails");
+  if (noSel) noSel.style.display = "none";
+  if (details) details.style.display = "block";
+
+  setText("orderId", order.id);
+  setText("orderTime", `Placed: ${formatDateTime(order.createdAt)}`);
+
+  const badge = document.getElementById("orderStatusBadge");
+  if (badge) {
+    badge.innerText = order.status || "—";
+    badge.className = `status-badge status-${String(order.status || "").toLowerCase()}`;
+  }
+
+  renderTimeline(order);
+
+  setText("customerName", order.user?.name || "Unknown Customer");
+  setText("customerEmail", order.user?.email || "No email");
+  setText("customerPhone", order.user?.phone || "Not provided");
+
+  const avatar = document.getElementById("customerAvatar");
+  if (avatar) avatar.innerText = (order.user?.name?.charAt(0) || "C").toUpperCase();
+
+  setText("deliveryAddress", order.deliveryAddress || "Address not specified");
+  setText("paymentMethod", order.paymentMethod || "COD");
+
+  // ETA (simple)
+  if (order.createdAt) {
+    const created = new Date(order.createdAt);
+    const now = new Date();
+    const diffHours = Math.floor((now - created) / (1000 * 60 * 60));
+    setText("deliveryEta", diffHours < 1 ? "Within 1 hour" : `${diffHours} hours ago`);
+  } else {
+    setText("deliveryEta", "—");
+  }
+
+  renderItems(order);
+
+  setText("orderSubtotal", `Rs. ${formatNpr(order.subtotal || 0)}`);
+  setText("orderTax", `Rs. ${formatNpr(order.tax || 0)}`);
+  setText("orderTotal", `Rs. ${formatNpr(order.total || 0)}`);
+  setText("orderTotalQuick", formatNpr(order.total || 0));
+
+  // Buttons state
+  const btnPickup = document.getElementById("btnPickup");
+  const btnDeliver = document.getElementById("btnDeliver");
+  const btnCancel = document.getElementById("btnCancel");
+
+  if (btnPickup) {
+    btnPickup.disabled = order.status !== "ASSIGNED";
+    btnPickup.innerHTML =
+      order.status === "PICKED_UP"
+        ? '<i class="fas fa-check"></i> Picked Up'
+        : '<i class="fas fa-box"></i> Pick Up';
+  }
+  if (btnDeliver) btnDeliver.disabled = order.status !== "PICKED_UP";
+  if (btnCancel) btnCancel.disabled = order.status === "CANCELLED" || order.status === "DELIVERED";
+
+  const notesEl = document.getElementById("deliveryNotes");
+  if (notesEl) notesEl.value = order.deliveryNotes || "";
+
+  setText(
+    "selectedOrderInfo",
+    `Order #${order.id} • ${formatDate(order.createdAt)} • ${order.status || "—"}`
+  );
+}
+
+function renderTimeline(order) {
+  const timeline = document.getElementById("orderTimeline");
+  if (!timeline) return;
+
+  const steps = [
+    { key: "PLACED", label: "Placed", time: order.createdAt },
+    { key: "ASSIGNED", label: "Assigned", time: order.assignedAt },
+    { key: "PICKED_UP", label: "Picked Up", time: order.pickedUpAt },
+    { key: "DELIVERED", label: "Delivered", time: order.deliveredAt },
+  ];
+
+  const statusOrder = ["PLACED", "ASSIGNED", "PICKED_UP", "DELIVERED"];
+  const currentIndex = statusOrder.indexOf(order.status);
+
+  timeline.innerHTML = steps
+    .map((step, index) => {
+      let className = "";
+      if (step.time) className = "completed";
+      else if (index === currentIndex) className = "active";
+      else if (index < currentIndex) className = "completed";
+
+      const timeStr = step.time ? formatTime(step.time) : "";
+
+      return `
+        <div class="timeline-step ${className}">
+          <div class="dot"></div>
+          <div class="timeline-label">${step.label}</div>
+          <div class="timeline-label" style="font-size: 10px;">${timeStr}</div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function renderItems(order) {
+  const itemsList = document.getElementById("orderItems");
+  const itemsCount = document.getElementById("itemsCount");
+  if (!itemsList) return;
+
+  itemsList.innerHTML = "";
+
+  const items = order.items || [];
+  if (itemsCount) itemsCount.innerText = `(${items.length} items)`;
+
+  if (items.length === 0) {
+    itemsList.innerHTML =
+      '<div style="text-align:center;padding:20px;color:var(--text-secondary);">No items found</div>';
+    if (itemsCount) itemsCount.innerText = "(0 items)";
+    return;
+  }
+
+  items.forEach((item) => {
+    const row = document.createElement("div");
+    row.className = "item-row";
+    const name = item.product?.name || "Unknown Product";
+    const cat = item.product?.category?.name || "";
+    const qty = item.quantity || 0;
+    const price = item.priceAtPurchase || 0;
+
+    row.innerHTML = `
+      <div>
+        <strong>${name}</strong>
+        <div class="order-meta">${cat}</div>
+      </div>
+      <div style="text-align:right;">
+        <div>${qty} × Rs. ${formatNpr(price)}</div>
+        <div style="font-weight:bold;color:var(--amazon-orange);">
+          Rs. ${formatNpr(qty * price)}
+        </div>
+      </div>
+    `;
+    itemsList.appendChild(row);
+  });
+}
+
+async function updateStatus(newStatus) {
+  if (!selectedOrderId) return alert("Select an order first.");
+
+  const order = (currentOrders || []).find((o) => o.id === selectedOrderId);
+  if (!order) return;
+
+  if (newStatus === "PICKED_UP" && order.status !== "ASSIGNED") {
+    alert("Order must be ASSIGNED before it can be picked up");
+    return;
+  }
+  if (newStatus === "DELIVERED" && order.status !== "PICKED_UP") {
+    alert("Order must be PICKED_UP before it can be delivered");
+    return;
+  }
+  if (!confirm(`Are you sure you want to mark this order as ${newStatus}?`)) return;
+
+  try {
+    const res = await fetch("/api/delivery/update-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: selectedOrderId,
+        deliveryPersonId: user.id,
+        status: newStatus,
+      }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText || "Failed to update status");
+    }
+
+    const updatedOrder = await res.json();
+    const idx = currentOrders.findIndex((o) => o.id === selectedOrderId);
+    if (idx !== -1) currentOrders[idx] = updatedOrder;
+
+    renderOrderList();
+    await showOrderDetails(selectedOrderId);
+    updateQuickStats();
+
+    alert(`Order status updated to ${newStatus}`);
+  } catch (e) {
+    console.error("Error updating status:", e);
+    alert("Failed to update order status: " + e.message);
+  }
+}
+
+async function saveNotes() {
+  if (!selectedOrderId) return alert("Select an order first.");
+
+  const notes = (document.getElementById("deliveryNotes")?.value || "").trim();
+
+  try {
+    const res = await fetch(`/api/orders/${selectedOrderId}/notes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes }),
+    });
+
+    if (!res.ok) throw new Error("Failed to save notes");
+
+    const idx = currentOrders.findIndex((o) => o.id === selectedOrderId);
+    if (idx !== -1) currentOrders[idx].deliveryNotes = notes;
+
+    alert("Notes saved successfully");
+  } catch (e) {
+    console.error("Error saving notes:", e);
+    alert("Failed to save notes.");
+  }
+}
+
+async function loadDeliveryStats() {
+  // Optional: only if you have an endpoint for delivery user details
+  try {
+    const res = await fetch(`/api/admin/users/${user.id}`);
+    if (!res.ok) return;
+
+    const details = await res.json();
+    // If you store completedDeliveries/rating there, reflect it
+    const statCompleted = document.getElementById("statCompleted");
+    const statRating = document.getElementById("statRating");
+    if (statCompleted && details.completedDeliveries != null) {
+      statCompleted.innerText = details.completedDeliveries;
+    }
+    if (statRating && details.rating != null) {
+      statRating.innerText = details.rating;
+    }
+  } catch (e) {
+    console.error("Error loading delivery stats:", e);
+  }
+}
+
+async function toggleAvailability() {
+  const newAvailability = !user.isAvailable;
+
+  try {
+    // Use whichever endpoint you actually implemented on backend:
+    // Example: POST /api/admin/delivery/{id}/availability  body: {isAvailable:true/false}
+    const res = await fetch(`/api/admin/delivery/${user.id}/availability`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isAvailable: newAvailability }),
+    });
+
+    if (!res.ok) throw new Error("Failed to update availability");
+
+    user.isAvailable = newAvailability;
+    localStorage.setItem("user", JSON.stringify(user));
+    updateAvailabilityButton();
+
+    alert(`Availability updated: ${newAvailability ? "Available" : "Busy"}`);
+  } catch (e) {
+    console.error("Error toggling availability:", e);
+    alert("Failed to update availability");
+  }
+}
+
+function updateAvailabilityButton() {
+  const btn = document.getElementById("availabilityBtn");
+  if (!btn) return;
+
+  if (user.isAvailable) {
+    btn.innerHTML = '<i class="fas fa-toggle-on"></i> Available';
+    btn.className = "btn btn-primary";
+    btn.style.background = "";
+    btn.style.color = "";
+    btn.style.border = "";
+  } else {
+    btn.innerHTML = '<i class="fas fa-toggle-off"></i> Busy';
+    btn.className = "btn btn-secondary";
+    btn.style.background = "rgba(239, 68, 68, 0.2)";
+    btn.style.color = "#ef4444";
+    btn.style.border = "1px solid rgba(239, 68, 68, 0.3)";
+  }
+}
+
+function filterOrders(filter) {
+  const original = [...currentOrders];
+  let filtered = [...currentOrders];
+
+  if (filter === "active") {
+    filtered = filtered.filter((o) => o.status !== "DELIVERED" && o.status !== "CANCELLED");
+  } else if (filter === "completed") {
+    filtered = filtered.filter((o) => o.status === "DELIVERED" || o.status === "CANCELLED");
+  }
+
+  currentOrders = filtered;
+  renderOrderList();
+  currentOrders = original;
+}
+
+function getDirections() {
+  const order = (currentOrders || []).find((o) => o.id === selectedOrderId);
+  if (!order?.deliveryAddress) return alert("No delivery address available");
+
+  const address = encodeURIComponent(order.deliveryAddress);
+  const url = `https://www.google.com/maps/search/?api=1&query=${address}`;
+  window.open(url, "_blank");
+}
+
+function contactCustomer() {
+  const order = (currentOrders || []).find((o) => o.id === selectedOrderId);
+  const phone = order?.user?.phone;
+  if (!phone) return alert("Customer phone number not available");
+  window.open(`tel:${phone}`);
+}
+
+function refreshOrders() {
+  loadMyOrders();
+  if (selectedOrderId) showOrderDetails(selectedOrderId);
+}
+
+function logout() {
+  localStorage.removeItem("user");
+  window.location.href = "/login.html";
+}
+
+// ---------------- Utilities ----------------
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.innerText = value == null ? "" : String(value);
+}
+
+function formatNpr(n) {
+  if (typeof n === "object" && n !== null) n = n.toString();
+  return new Intl.NumberFormat("en-NP", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n || 0);
+}
+
+function formatDate(dateString) {
+  if (!dateString) return "N/A";
+  const d = new Date(dateString);
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+}
+
+function formatTime(dateString) {
+  if (!dateString) return "";
+  const d = new Date(dateString);
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateTime(dateString) {
+  if (!dateString) return "N/A";
+  const d = new Date(dateString);
+  return d.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// Export for inline onclick usage (Admin style)
+window.updateStatus = updateStatus;
+window.saveNotes = saveNotes;
+window.refreshOrders = refreshOrders;
+window.logout = logout;
+window.toggleAvailability = toggleAvailability;
+window.filterOrders = filterOrders;
+window.getDirections = getDirections;
+window.contactCustomer = contactCustomer;

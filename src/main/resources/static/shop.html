@@ -1,120 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Shop - Local Grocery</title>
-    <link rel="stylesheet" href="/css/style.css?v=5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Grocery - Amazon Style</title>
+    <link rel="stylesheet" href="/css/customer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-<div class="container">
-    <div class="topbar">
-        <div class="brand">
-            <div class="logo"></div>
-            <div>
-                <h1 class="brandTitle">Local Grocery</h1>
-                <div class="subTitle">Fast local essentials • Nepal</div>
-            </div>
-        </div>
-        <div class="pill" id="who"></div>
+
+<header class="amazon-header">
+    <div class="logo-container">
+        <a href="/shop.html" class="amazon-logo">
+            Local<span>Grocery</span>
+        </a>
     </div>
 
-    <div class="grid">
-        <div class="card">
-            <div class="cardHeader">
-                <div>
-                    <h2>Browse Products</h2>
-                    <div class="muted">Filter by store/category or search items</div>
-                </div>
-            </div>
-            <div class="accentBar"></div>
+    <div class="location-container">
+        <i class="fas fa-map-marker-alt location-icon"></i>
+        <div>
+            <div style="font-size: 12px;">Deliver to</div>
+            <div style="font-weight: bold;">Nepal</div>
+        </div>
+    </div>
 
-            <div class="row" style="margin-top:12px;">
-                <input id="q" placeholder="Search (e.g., daal, rice, wai wai)">
-                <select id="storeSelect"></select>
-                <select id="categorySelect"></select>
-                <button class="secondary" onclick="applyFilters()">Filter</button>
-                <button class="secondary" onclick="resetFilters()">Reset</button>
-            </div>
+    <div class="search-container">
+        <select class="search-select" id="searchCategory">
+            <option value="all">All Departments</option>
+            <option value="grocery">Grocery</option>
+            <option value="dairy">Dairy</option>
+            <option value="snacks">Snacks</option>
+        </select>
+        <input type="text" class="search-input" id="searchInput" placeholder="Search for groceries, staples, and more...">
+        <button class="search-button" onclick="searchProducts()">
+            <i class="fas fa-search"></i>
+        </button>
+    </div>
 
-            <div class="list" id="productList"></div>
+    <nav class="header-nav">
+        <div class="nav-item" style="margin-right: 10px;">
+            <div style="font-size: 12px;">Hello,</div>
+            <div style="font-weight: bold;">
+                <span id="userGreeting">Sign in</span>
+                <span id="logoutLink" style="display: none; margin-left: 10px;">
+          <a href="#" onclick="return logout();" style="color: #d93025; font-size: 12px; text-decoration: none;">
+            (Sign Out)
+          </a>
+        </span>
+            </div>
         </div>
 
-        <div class="card">
-            <div class="cardHeader">
-                <div>
-                    <h2>Your Cart</h2>
-                    <div class="muted">Total in NPR (Rs.)</div>
-                </div>
+        <a href="/orders.html" class="nav-item" style="margin-right: 10px;">
+            <div style="font-size: 12px;">Returns</div>
+            <div style="font-weight: bold;">& Orders</div>
+        </a>
+
+        <a href="/cart.html" class="nav-item cart-container">
+            <div style="font-size: 25px; position: relative;">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count" id="cartCount">0</span>
             </div>
-            <div class="accentBar"></div>
+            <div style="font-weight: bold; margin-top: -5px;">Cart</div>
+        </a>
+    </nav>
+</header>
 
-            <div class="list" id="cartList"></div>
+<div class="main-container">
+    <div class="hero-banner">
+        <h1 class="hero-title">Fresh Groceries Delivered to Your Door</h1>
+        <p class="hero-subtitle">Shop from local stores with same-day delivery</p>
+        <div class="hero-search">
+            <div class="search-container" style="margin: 0;">
+                <select class="search-select" id="heroSearchCategory">
+                    <option value="all">All Categories</option>
+                </select>
+                <input type="text" class="search-input" id="heroSearchInput" placeholder="Try 'Rice', 'Daal', 'Milk'...">
+                <button class="search-button" onclick="searchProducts()">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </div>
+    </div>
 
-            <hr>
+    <div style="display: flex; gap: 20px;">
+        <div class="filters-sidebar" style="width: 250px; flex-shrink: 0;">
+            <h3>Filters</h3>
 
-            <div class="kpi">
-                <div class="box">
-                    <div class="val">Rs. <span id="subtotal">0</span></div>
-                    <div class="lbl">Subtotal</div>
-                </div>
-                <div class="box">
-                    <div class="val">Rs. <span id="tax">0</span></div>
-                    <div class="lbl">Tax (13%)</div>
-                </div>
-                <div class="box">
-                    <div class="val">Rs. <span id="total">0</span></div>
-                    <div class="lbl">Total</div>
-                </div>
+            <div class="filter-section">
+                <div class="filter-title">Category</div>
+                <div id="categoryFilters"></div>
             </div>
 
-            <hr>
-
-            <div class="muted" style="margin-bottom:6px;">Promo code</div>
-            <div class="row" style="grid-template-columns: 1fr auto;">
-                <input id="promo" placeholder="Enter promo code (e.g., NEPAL10)">
-                <button class="secondary" onclick="applyPromo()">Apply</button>
+            <div class="filter-section">
+                <div class="filter-title">Store</div>
+                <div id="storeFilters"></div>
             </div>
-            <div class="muted" id="promoMsg" style="margin-top:6px;"></div>
 
-            <hr>
+            <div class="filter-section">
+                <div class="filter-title">Price Range</div>
+                <input type="range" min="0" max="5000" value="5000" class="price-range" id="priceRange">
+                <div>Up to: Rs. <span id="priceValue">5000</span></div>
+            </div>
 
-            <div class="muted" style="margin-bottom:6px;">Payment Method</div>
-            <div class="row" style="grid-template-columns: 1fr 1fr;">
-                <label class="pill" style="justify-content:center; cursor:pointer;">
-                    <input type="radio" name="pay" value="COD" checked onchange="togglePayment()" />
-                    Cash on Delivery
+            <div class="filter-section">
+                <div class="filter-title">Availability</div>
+                <label class="filter-option">
+                    <input type="checkbox" id="inStockOnly" checked>
+                    In stock only
                 </label>
-                <label class="pill" style="justify-content:center; cursor:pointer;">
-                    <input type="radio" name="pay" value="CARD" onchange="togglePayment()" />
-                    Credit / Debit Card
-                </label>
             </div>
 
-            <div id="cardBox" class="card" style="margin-top:12px; display:none;">
-                <div class="muted">Card details (demo). CVV is not stored.</div>
-                <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
-                    <input id="cardName" placeholder="Name on card">
-                    <input id="cardNumber" placeholder="Card number">
-                </div>
-                <div class="row" style="grid-template-columns: 1fr 1fr 1fr; margin-top:10px;">
-                    <input id="cardExp" placeholder="MM/YY">
-                    <input id="cardCvv" placeholder="CVV" type="password">
-                    <button class="secondary" onclick="validateCard()">Validate</button>
-                </div>
-                <div class="muted" id="cardMsg" style="margin-top:6px;"></div>
+            <button onclick="applyFilters()" style="width: 100%; padding: 10px; background: var(--amazon-orange); border: none; border-radius: 4px; cursor: pointer;">
+                Apply Filters
+            </button>
+        </div>
+
+        <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Fresh Picks for You</h2>
+                <select id="sortBy" onchange="sortProducts()" style="padding: 8px; border: 1px solid var(--amazon-border); border-radius: 4px;">
+                    <option value="default">Sort by: Featured</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="name">Name: A to Z</option>
+                </select>
             </div>
 
-            <hr>
+            <div class="products-grid" id="productsGrid"></div>
 
-            <input id="address" placeholder="Delivery Address (e.g., Itahari-6, Near Sathi Petrol Pump)">
-            <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
-                <button onclick="placeOrder()">Place Order</button>
-                <button class="secondary" onclick="logout()">Logout</button>
+            <div class="suggestions-section">
+                <h3 class="section-title">Frequently Bought Together</h3>
+                <div class="suggestions-grid" id="suggestionsGrid"></div>
             </div>
         </div>
     </div>
 </div>
 
-<script src="/js/shop.js"></script>
+<script src="/js/customer.js"></script>
 </body>
 </html>

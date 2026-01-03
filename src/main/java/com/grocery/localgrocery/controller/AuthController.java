@@ -16,19 +16,33 @@ public class AuthController {
         this.userRepository = userRepository;
     }
 
+    // Register request DTO
+    public static class RegisterRequest {
+        public String name;
+        public String email;
+        public String password;
+        public String role;
+    }
+
     // Register (for testing)
     @PostMapping("/register")
-    public User register(@RequestBody User user) {
-        if (user.getEmail() == null || user.getPassword() == null) {
+    public User register(@RequestBody RegisterRequest req) {
+        if (req.email == null || req.password == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password required");
         }
 
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+        if (userRepository.findByEmail(req.email).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already exists");
         }
 
-        if (user.getRole() == null) {
-            user.setRole("CUSTOMER");
+        User user = new User();
+        user.setEmail(req.email);
+        user.setPassword(req.password);
+        user.setRole(req.role != null ? req.role : "CUSTOMER");
+
+        // Set name if provided
+        if (req.name != null) {
+            user.setName(req.name);
         }
 
         return userRepository.save(user);

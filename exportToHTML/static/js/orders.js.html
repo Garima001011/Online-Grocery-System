@@ -1,0 +1,531 @@
+<html>
+<head>
+<title>orders.js</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #6aab73;}
+.s4 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+orders.js</font>
+</center></td></tr></table>
+<pre><span class="s0">// Orders JavaScript</span>
+<span class="s1">let user = </span><span class="s2">null</span><span class="s1">;</span>
+<span class="s1">let orders = [];</span>
+<span class="s1">let currentFilter = </span><span class="s3">'all'</span><span class="s1">;</span>
+
+<span class="s0">// Initialize</span>
+<span class="s1">document.addEventListener(</span><span class="s3">'DOMContentLoaded'</span><span class="s1">, () =&gt; {</span>
+    <span class="s1">user = JSON.parse(localStorage.getItem(</span><span class="s3">'user'</span><span class="s1">));</span>
+    <span class="s2">if </span><span class="s1">(!user) {</span>
+        <span class="s1">window.location.href = </span><span class="s3">'/login-amazon.html'</span><span class="s1">;</span>
+        <span class="s2">return</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">updateUserGreeting();</span>
+    <span class="s1">updateCartCount();</span>
+    <span class="s1">loadOrders();</span>
+    <span class="s1">setupEventListeners();</span>
+<span class="s1">});</span>
+
+<span class="s0">// Update user greeting</span>
+<span class="s2">function </span><span class="s1">updateUserGreeting() {</span>
+    <span class="s1">const greeting = document.getElementById(</span><span class="s3">'userGreeting'</span><span class="s1">);</span>
+    <span class="s2">if </span><span class="s1">(greeting &amp;&amp; user) {</span>
+        <span class="s1">greeting.textContent = user.name || user.email.split(</span><span class="s3">'@'</span><span class="s1">)[</span><span class="s4">0</span><span class="s1">];</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Update cart count</span>
+<span class="s2">function </span><span class="s1">updateCartCount() {</span>
+    <span class="s1">const cartCount = document.getElementById(</span><span class="s3">'cartCount'</span><span class="s1">);</span>
+    <span class="s2">if </span><span class="s1">(cartCount) {</span>
+        <span class="s1">const cart = JSON.parse(localStorage.getItem(</span><span class="s3">'cart'</span><span class="s1">)) || [];</span>
+        <span class="s1">const totalItems = cart.reduce((sum, item) =&gt; sum + item.quantity, </span><span class="s4">0</span><span class="s1">);</span>
+        <span class="s1">cartCount.textContent = totalItems;</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Load orders</span>
+<span class="s1">async </span><span class="s2">function </span><span class="s1">loadOrders() {</span>
+    <span class="s2">try </span><span class="s1">{</span>
+        <span class="s1">showLoading();</span>
+        <span class="s1">const response = await fetch(`/api/orders/user/${user.id}`);</span>
+        <span class="s2">if </span><span class="s1">(response.ok) {</span>
+            <span class="s1">orders = await response.json();</span>
+            <span class="s1">console.log(</span><span class="s3">'Loaded orders:'</span><span class="s1">, orders); </span><span class="s0">// Debug log</span>
+            <span class="s1">displayOrders();</span>
+        <span class="s1">} </span><span class="s2">else </span><span class="s1">{</span>
+            <span class="s1">console.error(</span><span class="s3">'Failed to load orders'</span><span class="s1">);</span>
+            <span class="s1">showEmptyState();</span>
+        <span class="s1">}</span>
+    <span class="s1">} </span><span class="s2">catch </span><span class="s1">(error) {</span>
+        <span class="s1">console.error(</span><span class="s3">'Error loading orders:'</span><span class="s1">, error);</span>
+        <span class="s1">showEmptyState();</span>
+    <span class="s1">} </span><span class="s2">finally </span><span class="s1">{</span>
+        <span class="s1">hideLoading();</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Display orders</span>
+<span class="s2">function </span><span class="s1">displayOrders() {</span>
+    <span class="s1">const ordersList = document.getElementById(</span><span class="s3">'ordersList'</span><span class="s1">);</span>
+    <span class="s1">const emptyOrders = document.getElementById(</span><span class="s3">'emptyOrders'</span><span class="s1">);</span>
+
+    <span class="s2">if </span><span class="s1">(!orders || orders.length === </span><span class="s4">0</span><span class="s1">) {</span>
+        <span class="s1">ordersList.innerHTML = </span><span class="s3">''</span><span class="s1">;</span>
+        <span class="s1">emptyOrders.style.display = </span><span class="s3">'block'</span><span class="s1">;</span>
+        <span class="s2">return</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">emptyOrders.style.display = </span><span class="s3">'none'</span><span class="s1">;</span>
+    <span class="s1">ordersList.innerHTML = </span><span class="s3">''</span><span class="s1">;</span>
+
+    <span class="s0">// Filter orders based on current selection</span>
+    <span class="s1">let filteredOrders = orders;</span>
+    <span class="s2">if </span><span class="s1">(currentFilter === </span><span class="s3">'delivered'</span><span class="s1">) {</span>
+        <span class="s1">filteredOrders = orders.filter(order =&gt; order.status === </span><span class="s3">'DELIVERED'</span><span class="s1">);</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(currentFilter === </span><span class="s3">'pending'</span><span class="s1">) {</span>
+        <span class="s1">filteredOrders = orders.filter(order =&gt; [</span><span class="s3">'PLACED'</span><span class="s1">, </span><span class="s3">'ASSIGNED'</span><span class="s1">, </span><span class="s3">'PICKED_UP'</span><span class="s1">].includes(order.status));</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(currentFilter === </span><span class="s3">'returns'</span><span class="s1">) {</span>
+        <span class="s1">filteredOrders = orders.filter(order =&gt;</span>
+            <span class="s1">order.items &amp;&amp; order.items.some(item =&gt; item.returnStatus &amp;&amp; item.returnStatus !== </span><span class="s3">'NONE'</span><span class="s1">)</span>
+        <span class="s1">);</span>
+    <span class="s1">}</span>
+
+    <span class="s2">if </span><span class="s1">(filteredOrders.length === </span><span class="s4">0</span><span class="s1">) {</span>
+        <span class="s1">ordersList.innerHTML = `</span>
+            <span class="s1">&lt;div style=</span><span class="s3">&quot;text-align: center; padding: 40px; color: #666;&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-search&quot; </span><span class="s1">style=</span><span class="s3">&quot;font-size: 40px; margin-bottom: 15px;&quot;</span><span class="s1">&gt;&lt;/i&gt;</span>
+                <span class="s1">&lt;h3&gt;No orders found&lt;/h3&gt;</span>
+                <span class="s1">&lt;p&gt;Try a different filter&lt;/p&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+        <span class="s1">`;</span>
+        <span class="s2">return</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">filteredOrders.forEach(order =&gt; {</span>
+        <span class="s1">ordersList.appendChild(createOrderCard(order));</span>
+    <span class="s1">});</span>
+<span class="s1">}</span>
+
+<span class="s0">// Create order card HTML</span>
+<span class="s2">function </span><span class="s1">createOrderCard(order) {</span>
+    <span class="s1">const orderDate = </span><span class="s2">new </span><span class="s1">Date(order.createdAt).toLocaleDateString(</span><span class="s3">'en-US'</span><span class="s1">, {</span>
+        <span class="s1">year: </span><span class="s3">'numeric'</span><span class="s1">,</span>
+        <span class="s1">month: </span><span class="s3">'long'</span><span class="s1">,</span>
+        <span class="s1">day: </span><span class="s3">'numeric'</span>
+    <span class="s1">});</span>
+
+    <span class="s0">// Format status for display</span>
+    <span class="s1">const statusDisplay = {</span>
+        <span class="s3">'PLACED'</span><span class="s1">: </span><span class="s3">'Order Placed'</span><span class="s1">,</span>
+        <span class="s3">'ASSIGNED'</span><span class="s1">: </span><span class="s3">'Assigned to Delivery'</span><span class="s1">,</span>
+        <span class="s3">'PICKED_UP'</span><span class="s1">: </span><span class="s3">'Picked Up'</span><span class="s1">,</span>
+        <span class="s3">'DELIVERED'</span><span class="s1">: </span><span class="s3">'Delivered'</span><span class="s1">,</span>
+        <span class="s3">'CANCELLED'</span><span class="s1">: </span><span class="s3">'Cancelled'</span>
+    <span class="s1">}[order.status] || order.status;</span>
+
+    <span class="s1">const totalAmount = order.total || (order.subtotal + order.tax);</span>
+
+    <span class="s1">const card = document.createElement(</span><span class="s3">'div'</span><span class="s1">);</span>
+    <span class="s1">card.className = </span><span class="s3">'order-card'</span><span class="s1">;</span>
+    <span class="s1">card.innerHTML = `</span>
+        <span class="s1">&lt;div class=</span><span class="s3">&quot;order-header&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;div class=</span><span class="s3">&quot;order-info&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;div class=</span><span class="s3">&quot;order-id&quot;</span><span class="s1">&gt;Order #${order.id}&lt;/div&gt;</span>
+                <span class="s1">&lt;div class=</span><span class="s3">&quot;order-date&quot;</span><span class="s1">&gt;Placed on ${orderDate}&lt;/div&gt;</span>
+                <span class="s1">&lt;div style=</span><span class="s3">&quot;font-size: 14px; color: #565959; margin-top: 5px;&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-map-marker-alt&quot;</span><span class="s1">&gt;&lt;/i&gt; ${order.deliveryAddress}</span>
+                <span class="s1">&lt;/div&gt;</span>
+                <span class="s1">${order.deliveredAt ? `</span>
+                    <span class="s1">&lt;div style=</span><span class="s3">&quot;font-size: 14px; color: #565959; margin-top: 5px;&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-check-circle&quot;</span><span class="s1">&gt;&lt;/i&gt; Delivered on ${</span><span class="s2">new </span><span class="s1">Date(order.deliveredAt).toLocaleDateString()}</span>
+                    <span class="s1">&lt;/div&gt;</span>
+                <span class="s1">` : </span><span class="s3">''</span><span class="s1">}</span>
+            <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;div class=</span><span class="s3">&quot;order-status&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;span class=</span><span class="s3">&quot;status-badge status-${order.status.toLowerCase()}&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">${statusDisplay}</span>
+                <span class="s1">&lt;/span&gt;</span>
+                <span class="s1">&lt;div style=</span><span class="s3">&quot;font-size: 18px; font-weight: bold; color: #b12704; margin-top: 5px;&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">Rs. ${parseFloat(totalAmount).toFixed(</span><span class="s4">2</span><span class="s1">)}</span>
+                <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+        <span class="s1">&lt;/div&gt;</span>
+
+        <span class="s1">${order.items &amp;&amp; order.items.length &gt; </span><span class="s4">0 </span><span class="s1">? `</span>
+            <span class="s1">&lt;div class=</span><span class="s3">&quot;order-items&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">${order.items.map(item =&gt; createOrderItemHTML(item, order.id, order.status)).join(</span><span class="s3">''</span><span class="s1">)}</span>
+            <span class="s1">&lt;/div&gt;</span>
+        <span class="s1">` : </span><span class="s3">'&lt;p style=&quot;color: #666; padding: 20px; text-align: center;&quot;&gt;No items in this order&lt;/p&gt;'</span><span class="s1">}</span>
+
+        <span class="s1">&lt;div class=</span><span class="s3">&quot;order-actions&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;button class=</span><span class="s3">&quot;auth-button&quot; </span><span class="s1">style=</span><span class="s3">&quot;padding: 8px 16px; font-size: 14px;&quot;</span>
+                    <span class="s1">onclick=</span><span class="s3">&quot;trackOrder(${order.id})&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-truck&quot;</span><span class="s1">&gt;&lt;/i&gt; Track Order</span>
+            <span class="s1">&lt;/button&gt;</span>
+            <span class="s1">&lt;button class=</span><span class="s3">&quot;auth-button&quot; </span><span class="s1">style=</span><span class="s3">&quot;padding: 8px 16px; font-size: 14px; background: #f0f2f2; color: #0f1111; margin-left: 10px;&quot;</span>
+                    <span class="s1">onclick=</span><span class="s3">&quot;reorder(${order.id})&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-redo&quot;</span><span class="s1">&gt;&lt;/i&gt; Buy Again</span>
+            <span class="s1">&lt;/button&gt;</span>
+        <span class="s1">&lt;/div&gt;</span>
+    <span class="s1">`;</span>
+
+    <span class="s2">return </span><span class="s1">card;</span>
+<span class="s1">}</span>
+
+<span class="s0">// Create order item HTML</span>
+<span class="s2">function </span><span class="s1">createOrderItemHTML(item, orderId, orderStatus) {</span>
+    <span class="s1">const productName = item.product?.name || item.productName || </span><span class="s3">'Product'</span><span class="s1">;</span>
+    <span class="s1">const priceAtPurchase = item.priceAtPurchase || </span><span class="s4">0</span><span class="s1">;</span>
+    <span class="s1">const quantity = item.quantity || </span><span class="s4">1</span><span class="s1">;</span>
+    <span class="s1">const returnStatus = item.returnStatus || </span><span class="s3">'NONE'</span><span class="s1">;</span>
+    <span class="s1">const refundAmount = item.refundAmount || </span><span class="s4">0</span><span class="s1">;</span>
+
+    <span class="s0">// Create return status badge if applicable</span>
+    <span class="s1">const returnStatusBadge = returnStatus !== </span><span class="s3">'NONE' </span><span class="s1">? `</span>
+        <span class="s1">&lt;span class=</span><span class="s3">&quot;return-status return-${returnStatus.toLowerCase()}&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">${returnStatus}${refundAmount &gt; </span><span class="s4">0 </span><span class="s1">? ` (Rs. ${refundAmount.toFixed(</span><span class="s4">2</span><span class="s1">)})` : </span><span class="s3">''</span><span class="s1">}</span>
+        <span class="s1">&lt;/span&gt;</span>
+    <span class="s1">` : </span><span class="s3">''</span><span class="s1">;</span>
+
+    <span class="s0">// Check if item can be returned</span>
+    <span class="s1">const isDelivered = orderStatus === </span><span class="s3">'DELIVERED'</span><span class="s1">;</span>
+    <span class="s1">const isWithinReturnPeriod = isDelivered &amp;&amp;</span>
+        <span class="s1">(!item.returnRequestedAt || </span><span class="s2">new </span><span class="s1">Date(item.returnRequestedAt) &gt; </span><span class="s2">new </span><span class="s1">Date(Date.now() - </span><span class="s4">7 </span><span class="s1">* </span><span class="s4">24 </span><span class="s1">* </span><span class="s4">60 </span><span class="s1">* </span><span class="s4">60 </span><span class="s1">* </span><span class="s4">1000</span><span class="s1">));</span>
+    <span class="s1">const canReturn = returnStatus === </span><span class="s3">'NONE' </span><span class="s1">&amp;&amp; isDelivered &amp;&amp; isWithinReturnPeriod;</span>
+
+    <span class="s0">// Get product image or icon</span>
+    <span class="s1">const productIcon = getProductIcon(productName);</span>
+
+    <span class="s2">return </span><span class="s1">`</span>
+        <span class="s1">&lt;div class=</span><span class="s3">&quot;order-item&quot;</span><span class="s1">&gt;</span>
+            <span class="s1">&lt;div class=</span><span class="s3">&quot;order-item-image&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">${productIcon}</span>
+            <span class="s1">&lt;/div&gt;</span>
+            <span class="s1">&lt;div class=</span><span class="s3">&quot;order-item-details&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;div class=</span><span class="s3">&quot;order-item-name&quot;</span><span class="s1">&gt;${productName}&lt;/div&gt;</span>
+                <span class="s1">&lt;div class=</span><span class="s3">&quot;order-item-meta&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">Quantity: ${quantity} × Rs. ${priceAtPurchase.toFixed(</span><span class="s4">2</span><span class="s1">)}</span>
+                    <span class="s1">${returnStatusBadge}</span>
+                <span class="s1">&lt;/div&gt;</span>
+                <span class="s1">&lt;div class=</span><span class="s3">&quot;order-item-price&quot;</span><span class="s1">&gt;</span>
+                    <span class="s1">Rs. ${(quantity * priceAtPurchase).toFixed(</span><span class="s4">2</span><span class="s1">)}</span>
+                <span class="s1">&lt;/div&gt;</span>
+                <span class="s1">${canReturn ? `</span>
+                    <span class="s1">&lt;div class=</span><span class="s3">&quot;order-item-actions&quot;</span><span class="s1">&gt;</span>
+                        <span class="s1">&lt;button class=</span><span class="s3">&quot;auth-button&quot; </span><span class="s1">style=</span><span class="s3">&quot;padding: 6px 12px; font-size: 13px;&quot;</span>
+                                <span class="s1">onclick=</span><span class="s3">&quot;requestReturn(${orderId}, ${item.id}, '${productName.replace(/'/g, &quot;</span><span class="s1">\\</span><span class="s3">'&quot;)}'</span><span class="s1">, ${priceAtPurchase})</span><span class="s3">&quot;&gt;</span>
+                            <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-undo&quot;</span><span class="s1">&gt;&lt;/i&gt; Return Item</span>
+                        <span class="s1">&lt;/button&gt;</span>
+                    <span class="s1">&lt;/div&gt;</span>
+                <span class="s1">` : </span><span class="s3">''</span><span class="s1">}</span>
+            <span class="s1">&lt;/div&gt;</span>
+        <span class="s1">&lt;/div&gt;</span>
+    <span class="s1">`;</span>
+<span class="s1">}</span>
+
+<span class="s0">// Get product icon based on name</span>
+<span class="s2">function </span><span class="s1">getProductIcon(productName) {</span>
+    <span class="s1">const name = productName.toLowerCase();</span>
+
+    <span class="s2">if </span><span class="s1">(name.includes(</span><span class="s3">'rice'</span><span class="s1">) || name.includes(</span><span class="s3">'dal'</span><span class="s1">) || name.includes(</span><span class="s3">'daal'</span><span class="s1">) || name.includes(</span><span class="s3">'grain'</span><span class="s1">)) {</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-seedling&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(name.includes(</span><span class="s3">'oil'</span><span class="s1">) || name.includes(</span><span class="s3">'ghee'</span><span class="s1">)) {</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-oil-can&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(name.includes(</span><span class="s3">'spice'</span><span class="s1">) || name.includes(</span><span class="s3">'masala'</span><span class="s1">)) {</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-mortar-pestle&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(name.includes(</span><span class="s3">'noodle'</span><span class="s1">) || name.includes(</span><span class="s3">'snack'</span><span class="s1">)) {</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-cookie-bite&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(name.includes(</span><span class="s3">'dairy'</span><span class="s1">) || name.includes(</span><span class="s3">'milk'</span><span class="s1">) || name.includes(</span><span class="s3">'cheese'</span><span class="s1">)) {</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-cheese&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(name.includes(</span><span class="s3">'fruit'</span><span class="s1">) || name.includes(</span><span class="s3">'apple'</span><span class="s1">) || name.includes(</span><span class="s3">'banana'</span><span class="s1">)) {</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-apple-alt&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">} </span><span class="s2">else if </span><span class="s1">(name.includes(</span><span class="s3">'beverage'</span><span class="s1">) || name.includes(</span><span class="s3">'drink'</span><span class="s1">) || name.includes(</span><span class="s3">'cola'</span><span class="s1">)) {</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-wine-bottle&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">} </span><span class="s2">else </span><span class="s1">{</span>
+        <span class="s2">return </span><span class="s3">'&lt;i class=&quot;fas fa-box&quot; style=&quot;font-size: 40px; color: #999;&quot;&gt;&lt;/i&gt;'</span><span class="s1">;</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Filter orders</span>
+<span class="s2">function </span><span class="s1">filterOrders(filter) {</span>
+    <span class="s1">currentFilter = filter;</span>
+
+    <span class="s0">// Update active tab</span>
+    <span class="s1">document.querySelectorAll(</span><span class="s3">'.order-tab'</span><span class="s1">).forEach(tab =&gt; {</span>
+        <span class="s1">tab.classList.remove(</span><span class="s3">'active'</span><span class="s1">);</span>
+    <span class="s1">});</span>
+    <span class="s1">event.target.classList.add(</span><span class="s3">'active'</span><span class="s1">);</span>
+
+    <span class="s1">displayOrders();</span>
+<span class="s1">}</span>
+
+<span class="s0">// Request return</span>
+<span class="s2">function </span><span class="s1">requestReturn(orderId, itemId, itemName, itemPrice) {</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnOrderId'</span><span class="s1">).value = orderId;</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnItemId'</span><span class="s1">).value = itemId;</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnItemName'</span><span class="s1">).textContent = itemName;</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnOrderInfo'</span><span class="s1">).textContent = `Order #${orderId}`;</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnItemPrice'</span><span class="s1">).textContent = `Price: Rs. ${itemPrice.toFixed(</span><span class="s4">2</span><span class="s1">)}`;</span>
+
+    <span class="s1">document.getElementById(</span><span class="s3">'returnModal'</span><span class="s1">).style.display = </span><span class="s3">'flex'</span><span class="s1">;</span>
+<span class="s1">}</span>
+
+<span class="s0">// Close return modal</span>
+<span class="s2">function </span><span class="s1">closeReturnModal() {</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnModal'</span><span class="s1">).style.display = </span><span class="s3">'none'</span><span class="s1">;</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnForm'</span><span class="s1">).reset();</span>
+<span class="s1">}</span>
+
+<span class="s0">// Submit return request</span>
+<span class="s1">async </span><span class="s2">function </span><span class="s1">submitReturnRequest(event) {</span>
+    <span class="s1">event.preventDefault();</span>
+
+    <span class="s1">const orderId = document.getElementById(</span><span class="s3">'returnOrderId'</span><span class="s1">).value;</span>
+    <span class="s1">const itemId = document.getElementById(</span><span class="s3">'returnItemId'</span><span class="s1">).value;</span>
+    <span class="s1">const reason = document.getElementById(</span><span class="s3">'returnReason'</span><span class="s1">).value;</span>
+    <span class="s1">const description = document.getElementById(</span><span class="s3">'returnDescription'</span><span class="s1">).value;</span>
+
+    <span class="s2">if </span><span class="s1">(!reason) {</span>
+        <span class="s1">alert(</span><span class="s3">'Please select a return reason'</span><span class="s1">);</span>
+        <span class="s2">return</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s2">try </span><span class="s1">{</span>
+        <span class="s1">const response = await fetch(`/api/orders/${orderId}/items/${itemId}/</span><span class="s2">return</span><span class="s1">`, {</span>
+            <span class="s1">method: </span><span class="s3">'POST'</span><span class="s1">,</span>
+            <span class="s1">headers: {</span>
+                <span class="s3">'Content-Type'</span><span class="s1">: </span><span class="s3">'application/json'</span>
+            <span class="s1">},</span>
+            <span class="s1">body: JSON.stringify({</span>
+                <span class="s1">reason: reason,</span>
+                <span class="s1">description: description,</span>
+                <span class="s1">policy: </span><span class="s3">'NEPAL CAN MOVE FAST'</span>
+            <span class="s1">})</span>
+        <span class="s1">});</span>
+
+        <span class="s2">if </span><span class="s1">(response.ok) {</span>
+            <span class="s1">const result = await response.json();</span>
+            <span class="s1">alert(</span><span class="s3">'Return request submitted successfully! Nepal Can Move Fast will contact you for pickup.'</span><span class="s1">);</span>
+            <span class="s1">closeReturnModal();</span>
+            <span class="s1">loadOrders(); </span><span class="s0">// Reload orders</span>
+        <span class="s1">} </span><span class="s2">else </span><span class="s1">{</span>
+            <span class="s1">const error = await response.text();</span>
+            <span class="s1">alert(`Failed to submit </span><span class="s2">return</span><span class="s1">: ${error}`);</span>
+        <span class="s1">}</span>
+    <span class="s1">} </span><span class="s2">catch </span><span class="s1">(error) {</span>
+        <span class="s1">console.error(</span><span class="s3">'Error submitting return:'</span><span class="s1">, error);</span>
+        <span class="s1">alert(</span><span class="s3">'Failed to submit return request. Please try again.'</span><span class="s1">);</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Show return policy</span>
+<span class="s2">function </span><span class="s1">showReturnPolicy() {</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'policyModal'</span><span class="s1">).style.display = </span><span class="s3">'flex'</span><span class="s1">;</span>
+<span class="s1">}</span>
+
+<span class="s0">// Close policy modal</span>
+<span class="s2">function </span><span class="s1">closePolicyModal() {</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'policyModal'</span><span class="s1">).style.display = </span><span class="s3">'none'</span><span class="s1">;</span>
+<span class="s1">}</span>
+
+<span class="s0">// Track order</span>
+<span class="s1">async </span><span class="s2">function </span><span class="s1">trackOrder(orderId) {</span>
+    <span class="s2">try </span><span class="s1">{</span>
+        <span class="s1">const response = await fetch(`/api/orders/${orderId}`);</span>
+        <span class="s2">if </span><span class="s1">(response.ok) {</span>
+            <span class="s1">const order = await response.json();</span>
+
+            <span class="s1">let trackingInfo = `Order #${orderId}\n`;</span>
+            <span class="s1">trackingInfo += `Status: ${order.status}\n`;</span>
+            <span class="s1">trackingInfo += `Placed: ${</span><span class="s2">new </span><span class="s1">Date(order.createdAt).toLocaleString()}\n`;</span>
+
+            <span class="s2">if </span><span class="s1">(order.deliveredAt) {</span>
+                <span class="s1">trackingInfo += `Delivered: ${</span><span class="s2">new </span><span class="s1">Date(order.deliveredAt).toLocaleString()}\n`;</span>
+            <span class="s1">} </span><span class="s2">else if </span><span class="s1">(order.pickedUpAt) {</span>
+                <span class="s1">trackingInfo += `Picked up: ${</span><span class="s2">new </span><span class="s1">Date(order.pickedUpAt).toLocaleString()}\n`;</span>
+            <span class="s1">} </span><span class="s2">else if </span><span class="s1">(order.assignedAt) {</span>
+                <span class="s1">trackingInfo += `Assigned to delivery: ${</span><span class="s2">new </span><span class="s1">Date(order.assignedAt).toLocaleString()}\n`;</span>
+            <span class="s1">}</span>
+
+            <span class="s2">if </span><span class="s1">(order.deliveryPerson) {</span>
+                <span class="s1">trackingInfo += `Delivery person assigned\n`;</span>
+            <span class="s1">}</span>
+
+            <span class="s1">trackingInfo += `\nDelivery Address: ${order.deliveryAddress}`;</span>
+
+            <span class="s1">alert(trackingInfo);</span>
+        <span class="s1">} </span><span class="s2">else </span><span class="s1">{</span>
+            <span class="s1">alert(</span><span class="s3">'Could not load tracking information.'</span><span class="s1">);</span>
+        <span class="s1">}</span>
+    <span class="s1">} </span><span class="s2">catch </span><span class="s1">(error) {</span>
+        <span class="s1">console.error(</span><span class="s3">'Error tracking order:'</span><span class="s1">, error);</span>
+        <span class="s1">alert(</span><span class="s3">'Error loading tracking information.'</span><span class="s1">);</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Reorder</span>
+<span class="s1">async </span><span class="s2">function </span><span class="s1">reorder(orderId) {</span>
+    <span class="s2">try </span><span class="s1">{</span>
+        <span class="s1">const response = await fetch(`/api/orders/${orderId}`);</span>
+        <span class="s2">if </span><span class="s1">(response.ok) {</span>
+            <span class="s1">const order = await response.json();</span>
+
+            <span class="s2">if </span><span class="s1">(order.items &amp;&amp; order.items.length &gt; </span><span class="s4">0</span><span class="s1">) {</span>
+                <span class="s1">let cart = JSON.parse(localStorage.getItem(</span><span class="s3">'cart'</span><span class="s1">)) || [];</span>
+
+                <span class="s1">order.items.forEach(item =&gt; {</span>
+                    <span class="s1">const existingItem = cart.find(ci =&gt; ci.productId === item.product?.id);</span>
+
+                    <span class="s2">if </span><span class="s1">(existingItem) {</span>
+                        <span class="s1">existingItem.quantity += item.quantity;</span>
+                    <span class="s1">} </span><span class="s2">else </span><span class="s1">{</span>
+                        <span class="s1">cart.push({</span>
+                            <span class="s1">productId: item.product?.id,</span>
+                            <span class="s1">name: item.product?.name,</span>
+                            <span class="s1">price: item.priceAtPurchase,</span>
+                            <span class="s1">quantity: item.quantity</span>
+                        <span class="s1">});</span>
+                    <span class="s1">}</span>
+                <span class="s1">});</span>
+
+                <span class="s1">localStorage.setItem(</span><span class="s3">'cart'</span><span class="s1">, JSON.stringify(cart));</span>
+                <span class="s1">updateCartCount();</span>
+                <span class="s1">alert(</span><span class="s3">'Items added to cart successfully!'</span><span class="s1">);</span>
+            <span class="s1">} </span><span class="s2">else </span><span class="s1">{</span>
+                <span class="s1">alert(</span><span class="s3">'No items to reorder.'</span><span class="s1">);</span>
+            <span class="s1">}</span>
+        <span class="s1">} </span><span class="s2">else </span><span class="s1">{</span>
+            <span class="s1">alert(</span><span class="s3">'Could not load order details.'</span><span class="s1">);</span>
+        <span class="s1">}</span>
+    <span class="s1">} </span><span class="s2">catch </span><span class="s1">(error) {</span>
+        <span class="s1">console.error(</span><span class="s3">'Error reordering:'</span><span class="s1">, error);</span>
+        <span class="s1">alert(</span><span class="s3">'Error adding items to cart.'</span><span class="s1">);</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Search orders</span>
+<span class="s2">function </span><span class="s1">searchOrders() {</span>
+    <span class="s1">const searchInput = document.getElementById(</span><span class="s3">'searchInput'</span><span class="s1">).value.toLowerCase();</span>
+    <span class="s1">const searchTerm = searchInput.trim();</span>
+
+    <span class="s2">if </span><span class="s1">(!searchTerm) {</span>
+        <span class="s1">displayOrders();</span>
+        <span class="s2">return</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">const filteredOrders = orders.filter(order =&gt; {</span>
+        <span class="s0">// Search by order ID</span>
+        <span class="s2">if </span><span class="s1">(order.id.toString().includes(searchTerm)) </span><span class="s2">return true</span><span class="s1">;</span>
+
+        <span class="s0">// Search in order items</span>
+        <span class="s2">if </span><span class="s1">(order.items) {</span>
+            <span class="s1">const foundInItems = order.items.some(item =&gt; {</span>
+                <span class="s1">const itemName = item.product?.name || </span><span class="s3">''</span><span class="s1">;</span>
+                <span class="s2">return </span><span class="s1">itemName.toLowerCase().includes(searchTerm);</span>
+            <span class="s1">});</span>
+            <span class="s2">if </span><span class="s1">(foundInItems) </span><span class="s2">return true</span><span class="s1">;</span>
+        <span class="s1">}</span>
+
+        <span class="s0">// Search in delivery address</span>
+        <span class="s2">if </span><span class="s1">(order.deliveryAddress &amp;&amp; order.deliveryAddress.toLowerCase().includes(searchTerm)) {</span>
+            <span class="s2">return true</span><span class="s1">;</span>
+        <span class="s1">}</span>
+
+        <span class="s2">return false</span><span class="s1">;</span>
+    <span class="s1">});</span>
+
+    <span class="s0">// Create temporary display</span>
+    <span class="s1">const ordersList = document.getElementById(</span><span class="s3">'ordersList'</span><span class="s1">);</span>
+    <span class="s1">ordersList.innerHTML = </span><span class="s3">''</span><span class="s1">;</span>
+
+    <span class="s2">if </span><span class="s1">(filteredOrders.length === </span><span class="s4">0</span><span class="s1">) {</span>
+        <span class="s1">ordersList.innerHTML = `</span>
+            <span class="s1">&lt;div style=</span><span class="s3">&quot;text-align: center; padding: 40px; color: #666;&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-search&quot; </span><span class="s1">style=</span><span class="s3">&quot;font-size: 40px; margin-bottom: 15px;&quot;</span><span class="s1">&gt;&lt;/i&gt;</span>
+                <span class="s1">&lt;h3&gt;No orders matching </span><span class="s3">&quot;${searchTerm}&quot;</span><span class="s1">&lt;/h3&gt;</span>
+                <span class="s1">&lt;p&gt;Try searching </span><span class="s2">with </span><span class="s1">different terms&lt;/p&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+        <span class="s1">`;</span>
+        <span class="s2">return</span><span class="s1">;</span>
+    <span class="s1">}</span>
+
+    <span class="s1">filteredOrders.forEach(order =&gt; {</span>
+        <span class="s1">ordersList.appendChild(createOrderCard(order));</span>
+    <span class="s1">});</span>
+<span class="s1">}</span>
+
+<span class="s0">// Setup event listeners</span>
+<span class="s2">function </span><span class="s1">setupEventListeners() {</span>
+    <span class="s0">// Return form submission</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'returnForm'</span><span class="s1">).addEventListener(</span><span class="s3">'submit'</span><span class="s1">, submitReturnRequest);</span>
+
+    <span class="s0">// Close modals on outside click</span>
+    <span class="s1">window.addEventListener(</span><span class="s3">'click'</span><span class="s1">, (event) =&gt; {</span>
+        <span class="s1">const returnModal = document.getElementById(</span><span class="s3">'returnModal'</span><span class="s1">);</span>
+        <span class="s1">const policyModal = document.getElementById(</span><span class="s3">'policyModal'</span><span class="s1">);</span>
+
+        <span class="s2">if </span><span class="s1">(event.target === returnModal) {</span>
+            <span class="s1">closeReturnModal();</span>
+        <span class="s1">}</span>
+        <span class="s2">if </span><span class="s1">(event.target === policyModal) {</span>
+            <span class="s1">closePolicyModal();</span>
+        <span class="s1">}</span>
+    <span class="s1">});</span>
+
+    <span class="s0">// Search input enter key</span>
+    <span class="s1">document.getElementById(</span><span class="s3">'searchInput'</span><span class="s1">)?.addEventListener(</span><span class="s3">'keypress'</span><span class="s1">, (e) =&gt; {</span>
+        <span class="s2">if </span><span class="s1">(e.key === </span><span class="s3">'Enter'</span><span class="s1">) {</span>
+            <span class="s1">searchOrders();</span>
+        <span class="s1">}</span>
+    <span class="s1">});</span>
+<span class="s1">}</span>
+
+<span class="s0">// Show loading state</span>
+<span class="s2">function </span><span class="s1">showLoading() {</span>
+    <span class="s1">const ordersList = document.getElementById(</span><span class="s3">'ordersList'</span><span class="s1">);</span>
+    <span class="s2">if </span><span class="s1">(ordersList) {</span>
+        <span class="s1">ordersList.innerHTML = `</span>
+            <span class="s1">&lt;div style=</span><span class="s3">&quot;text-align: center; padding: 50px;&quot;</span><span class="s1">&gt;</span>
+                <span class="s1">&lt;i class=</span><span class="s3">&quot;fas fa-spinner fa-spin&quot; </span><span class="s1">style=</span><span class="s3">&quot;font-size: 40px; color: var(--amazon-orange);&quot;</span><span class="s1">&gt;&lt;/i&gt;</span>
+                <span class="s1">&lt;p&gt;Loading your orders...&lt;/p&gt;</span>
+            <span class="s1">&lt;/div&gt;</span>
+        <span class="s1">`;</span>
+    <span class="s1">}</span>
+<span class="s1">}</span>
+
+<span class="s0">// Hide loading state</span>
+<span class="s2">function </span><span class="s1">hideLoading() {</span>
+    <span class="s0">// Loading state is cleared by displayOrders</span>
+<span class="s1">}</span>
+
+<span class="s0">// Show empty state</span>
+<span class="s2">function </span><span class="s1">showEmptyState() {</span>
+    <span class="s1">const ordersList = document.getElementById(</span><span class="s3">'ordersList'</span><span class="s1">);</span>
+    <span class="s1">const emptyOrders = document.getElementById(</span><span class="s3">'emptyOrders'</span><span class="s1">);</span>
+
+    <span class="s2">if </span><span class="s1">(ordersList) ordersList.innerHTML = </span><span class="s3">''</span><span class="s1">;</span>
+    <span class="s2">if </span><span class="s1">(emptyOrders) emptyOrders.style.display = </span><span class="s3">'block'</span><span class="s1">;</span>
+<span class="s1">}</span>
+
+<span class="s0">// Export functions for global use</span>
+<span class="s1">window.filterOrders = filterOrders;</span>
+<span class="s1">window.requestReturn = requestReturn;</span>
+<span class="s1">window.closeReturnModal = closeReturnModal;</span>
+<span class="s1">window.submitReturnRequest = submitReturnRequest;</span>
+<span class="s1">window.showReturnPolicy = showReturnPolicy;</span>
+<span class="s1">window.closePolicyModal = closePolicyModal;</span>
+<span class="s1">window.trackOrder = trackOrder;</span>
+<span class="s1">window.reorder = reorder;</span>
+<span class="s1">window.searchOrders = searchOrders;</span></pre>
+</body>
+</html>
