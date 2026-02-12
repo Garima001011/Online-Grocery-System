@@ -23,13 +23,24 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS sales_reports;
 DROP VIEW IF EXISTS admin_returns_view;
 
--- Create users table
+-- Create users table with PHONE column (mandatory)
 CREATE TABLE users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role VARCHAR(255) NOT NULL,
-    name VARCHAR(255)
+    name VARCHAR(255),
+    phone VARCHAR(20) NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    -- Delivery partner specific fields
+    vehicle_type VARCHAR(50),
+    vehicle_number VARCHAR(50),
+    is_available BOOLEAN DEFAULT TRUE,
+    current_location VARCHAR(255),
+    rating DECIMAL(3,2) DEFAULT 5.0,
+    total_deliveries INT DEFAULT 0,
+    profile_image_url VARCHAR(500)
 );
 
 -- Create stores table
@@ -165,12 +176,12 @@ WHERE oi.return_status != 'NONE';
 -- 2. SEED DATA INSERTION
 -- ============================================
 
--- Insert users
-INSERT INTO users (email, password, role, name) VALUES
-('admin@grocery.com', 'admin', 'ADMIN', NULL),
-('user@grocery.com', '1234', 'CUSTOMER', NULL),
-('delivery1@local.com', 'pass123', 'DELIVERY', NULL),
-('customer@test.com', 'test123', 'CUSTOMER', NULL);
+-- Insert users with PHONE NUMBERS (mandatory)
+INSERT INTO users (email, password, role, name, phone, vehicle_type, vehicle_number, is_available, rating, total_deliveries) VALUES
+('admin@grocery.com', 'admin', 'ADMIN', 'Admin User', '9800000000', NULL, NULL, NULL, NULL, NULL),
+('user@grocery.com', '1234', 'CUSTOMER', 'Regular Customer', '9812345678', NULL, NULL, NULL, NULL, NULL),
+('delivery1@local.com', 'pass123', 'DELIVERY', 'Ram Sharma', '9822222222', 'Motorcycle', 'BA 12 PA 1234', TRUE, 4.8, 150),
+('customer@test.com', 'test123', 'CUSTOMER', 'Test Customer', '9833333333', NULL, NULL, NULL, NULL, NULL);
 
 -- Insert stores
 INSERT INTO stores (name, location, description, image_url) VALUES
@@ -271,9 +282,9 @@ SELECT
     (SELECT COUNT(*) FROM products) AS total_products,
     (SELECT COUNT(*) FROM orders) AS total_orders;
 
--- Show user credentials for testing
+-- Show user credentials for testing (now includes phone)
 SELECT '=== TEST CREDENTIALS ===' AS info;
-SELECT email, password, role FROM users;
+SELECT id, email, password, role, name, phone FROM users;
 
 -- Show available endpoints (example)
 SELECT '=== SAMPLE API ENDPOINTS ===' AS info;

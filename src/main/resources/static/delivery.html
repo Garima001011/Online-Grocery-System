@@ -29,7 +29,6 @@
             color: var(--text-primary);
         }
 
-        /* Amazon Header */
         .amazon-header {
             background: var(--amazon-dark);
             padding: 0.8rem 1rem;
@@ -102,7 +101,6 @@
         .status-delivered { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .status-cancelled { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
 
-        /* Main Container */
         .main-container {
             max-width: 1500px;
             margin: 0 auto;
@@ -116,7 +114,6 @@
             margin-top: 20px;
         }
 
-        /* Cards */
         .amazon-card {
             background: var(--amazon-light);
             border: 1px solid var(--amazon-border);
@@ -150,7 +147,6 @@
             padding: 20px;
         }
 
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -179,7 +175,6 @@
             text-transform: uppercase;
         }
 
-        /* Order List */
         .order-list {
             max-height: 600px;
             overflow-y: auto;
@@ -239,7 +234,6 @@
             border-bottom: 1px solid var(--amazon-border);
         }
 
-        /* Timeline */
         .timeline {
             display: flex;
             justify-content: space-between;
@@ -301,7 +295,6 @@
             font-weight: 600;
         }
 
-        /* Customer Info */
         .customer-card {
             background: var(--amazon-dark);
             border: 1px solid var(--amazon-border);
@@ -330,7 +323,6 @@
             color: white;
         }
 
-        /* Buttons */
         .btn {
             padding: 10px 20px;
             border: none;
@@ -386,7 +378,6 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        /* Action Buttons */
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -394,7 +385,6 @@
             margin: 20px 0;
         }
 
-        /* Info Grid */
         .info-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -421,7 +411,6 @@
             font-weight: 600;
         }
 
-        /* Map Preview */
         .map-preview {
             height: 150px;
             background: linear-gradient(135deg, rgba(255, 153, 0, 0.1), rgba(255, 153, 0, 0.05));
@@ -460,7 +449,6 @@
             50% { transform: scale(1.1); }
         }
 
-        /* Items List */
         .items-list {
             max-height: 250px;
             overflow-y: auto;
@@ -481,7 +469,6 @@
             border-bottom: none;
         }
 
-        /* Order Summary */
         .order-summary {
             background: var(--amazon-dark);
             border: 1px solid var(--amazon-border);
@@ -504,7 +491,6 @@
             color: var(--amazon-orange);
         }
 
-        /* Notes */
         .notes-textarea {
             width: 100%;
             padding: 12px;
@@ -523,7 +509,6 @@
             border-color: var(--amazon-orange);
         }
 
-        /* Empty State */
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -536,7 +521,6 @@
             opacity: 0.5;
         }
 
-        /* Scrollbar */
         ::-webkit-scrollbar {
             width: 10px;
         }
@@ -554,11 +538,30 @@
             background: var(--amazon-orange);
         }
 
-        /* Responsive */
         @media (max-width: 1200px) {
             .dashboard-grid {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* New style for structured address display */
+        .address-block {
+            background: var(--amazon-dark);
+            border: 1px solid var(--amazon-border);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+
+        .address-block div {
+            margin-bottom: 4px;
+        }
+
+        .address-block strong {
+            color: var(--amazon-orange);
+            min-width: 100px;
+            display: inline-block;
         }
     </style>
 </head>
@@ -691,28 +694,26 @@
                         </div>
                     </div>
 
-                    <!-- Delivery Info -->
+                    <!-- Delivery Information - STRUCTURED ADDRESS -->
                     <div class="order-details-section">
                         <div class="section-title">Delivery Information</div>
                         <div class="info-grid">
-                            <div class="info-box">
-                                <div class="info-label">Address</div>
-                                <div class="info-value" id="deliveryAddress">—</div>
-                            </div>
-                            <div class="info-box">
-                                <div class="info-label">Estimated Time</div>
-                                <div class="info-value" id="deliveryEta">—</div>
-                            </div>
                             <div class="info-box">
                                 <div class="info-label">Payment Method</div>
                                 <div class="info-value" id="paymentMethod">COD</div>
                             </div>
                             <div class="info-box">
-                                <div class="info-label">Order Total</div>
-                                <div class="info-value" style="color: var(--amazon-orange);">Rs. <span id="orderTotalQuick">0.00</span></div>
+                                <div class="info-label">Estimated Time</div>
+                                <div class="info-value" id="deliveryEta">—</div>
                             </div>
                         </div>
 
+                        <!-- Structured Address Block -->
+                        <div class="address-block" id="deliveryAddressContainer">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+
+                        <!-- Map Preview (uses full address built from fields) -->
                         <div class="map-preview" onclick="getDirections()">
                             <div class="location-marker">
                                 <i class="fas fa-map-marker-alt" style="color: white;"></i>

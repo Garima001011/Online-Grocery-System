@@ -48,11 +48,8 @@ function updateUserGreeting() {
 
 async function loadMyOrders() {
   try {
-    // Preferred: delivery endpoint
-    // If you have: GET /api/delivery/my-orders?deliveryPersonId=ID
     let res = await fetch(`/api/delivery/my-orders?deliveryPersonId=${user.id}`);
 
-    // Fallback: older admin endpoint if you still use it
     if (!res.ok) {
       res = await fetch(`/api/admin/orders/assigned`);
       if (!res.ok) throw new Error("Failed to load orders");
@@ -188,7 +185,18 @@ async function showOrderDetails(orderId) {
   const avatar = document.getElementById("customerAvatar");
   if (avatar) avatar.innerText = (order.user?.name?.charAt(0) || "C").toUpperCase();
 
-  setText("deliveryAddress", order.deliveryAddress || "Address not specified");
+  // ----- STRUCTURED ADDRESS DISPLAY -----
+  const addressContainer = document.getElementById("deliveryAddressContainer");
+  if (addressContainer) {
+    // Build full address string for maps
+    const fullAddress = buildFullAddress(order);
+    // Also store it in a data attribute for getDirections
+    addressContainer.dataset.fullAddress = fullAddress;
+
+    // Render the detailed address
+    addressContainer.innerHTML = renderStructuredAddress(order);
+  }
+
   setText("paymentMethod", order.paymentMethod || "COD");
 
   // ETA (simple)
@@ -230,6 +238,51 @@ async function showOrderDetails(orderId) {
     "selectedOrderInfo",
     `Order #${order.id} • ${formatDate(order.createdAt)} • ${order.status || "—"}`
   );
+}
+
+// Helper: Build full address string for maps
+function buildFullAddress(order) {
+  if (!order) return "";
+  const parts = [
+    order.streetAddress,
+    order.city,
+    order.district,
+    order.province,
+    order.postalCode,
+    order.landmark ? `(${order.landmark})` : ""
+  ].filter(Boolean);
+  return parts.join(", ");
+}
+
+// Helper: Render structured address HTML
+function renderStructuredAddress(order) {
+  const rows = [];
+
+  if (order.recipientName) {
+    rows.push(`<div><strong>Recipient:</strong> ${order.recipientName}</div>`);
+  }
+  if (order.recipientPhone) {
+    rows.push(`<div><strong>Phone:</strong> ${order.recipientPhone}</div>`);
+  }
+  if (order.streetAddress) {
+    rows.push(`<div><strong>Street:</strong> ${order.streetAddress}</div>`);
+  }
+  if (order.city || order.district || order.province) {
+    const line = [order.city, order.district, order.province].filter(Boolean).join(", ");
+    rows.push(`<div><strong>City/District/Province:</strong> ${line}</div>`);
+  }
+  if (order.postalCode) {
+    rows.push(`<div><strong>Postal Code:</strong> ${order.postalCode}</div>`);
+  }
+  if (order.landmark) {
+    rows.push(`<div><strong>Landmark:</strong> ${order.landmark}</div>`);
+  }
+
+  if (rows.length === 0) {
+    return '<div style="color: var(--text-secondary);">Address not specified</div>';
+  }
+
+  return rows.join('');
 }
 
 function renderTimeline(order) {
@@ -379,13 +432,11 @@ async function saveNotes() {
 }
 
 async function loadDeliveryStats() {
-  // Optional: only if you have an endpoint for delivery user details
   try {
     const res = await fetch(`/api/admin/users/${user.id}`);
     if (!res.ok) return;
 
     const details = await res.json();
-    // If you store completedDeliveries/rating there, reflect it
     const statCompleted = document.getElementById("statCompleted");
     const statRating = document.getElementById("statRating");
     if (statCompleted && details.completedDeliveries != null) {
@@ -403,8 +454,6 @@ async function toggleAvailability() {
   const newAvailability = !user.isAvailable;
 
   try {
-    // Use whichever endpoint you actually implemented on backend:
-    // Example: POST /api/admin/delivery/{id}/availability  body: {isAvailable:true/false}
     const res = await fetch(`/api/admin/delivery/${user.id}/availability`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -460,10 +509,13 @@ function filterOrders(filter) {
 
 function getDirections() {
   const order = (currentOrders || []).find((o) => o.id === selectedOrderId);
-  if (!order?.deliveryAddress) return alert("No delivery address available");
+  if (!order) return alert("No order selected");
 
-  const address = encodeURIComponent(order.deliveryAddress);
-  const url = `https://www.google.com/maps/search/?api=1&query=${address}`;
+  const fullAddress = buildFullAddress(order);
+  if (!fullAddress) return alert("No delivery address available");
+
+  const encoded = encodeURIComponent(fullAddress);
+  const url = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
   window.open(url, "_blank");
 }
 
@@ -522,7 +574,7 @@ function formatDateTime(dateString) {
   });
 }
 
-// Export for inline onclick usage (Admin style)
+// Export for inline onclick usage
 window.updateStatus = updateStatus;
 window.saveNotes = saveNotes;
 window.refreshOrders = refreshOrders;

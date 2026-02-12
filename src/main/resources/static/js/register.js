@@ -72,6 +72,7 @@ function selectRole(role) {
 async function handleRegistration() {
     const name = document.getElementById('name').value.trim();
     const email = document.getElementById('email').value.trim();
+    const phone = document.getElementById('phone').value.trim();   // NEW
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
     const registerButton = document.getElementById('registerButton');
@@ -92,6 +93,15 @@ async function handleRegistration() {
         isValid = false;
     } else if (!isValidEmail(email)) {
         showError('emailError', 'Enter a valid email address');
+        isValid = false;
+    }
+
+    // NEW: Phone validation
+    if (!phone) {
+        showError('phoneError', 'Enter your mobile number');
+        isValid = false;
+    } else if (!/^\d{10,15}$/.test(phone)) {
+        showError('phoneError', 'Enter a valid phone number (10-15 digits)');
         isValid = false;
     }
 
@@ -123,6 +133,7 @@ async function handleRegistration() {
             body: JSON.stringify({
                 name: name,
                 email: email,
+                phone: phone,           // NEW: send phone number
                 password: password,
                 role: selectedRole
             })

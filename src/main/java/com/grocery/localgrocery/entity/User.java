@@ -24,6 +24,7 @@ public class User {
     private String name;
 
     // New fields for all users
+    @Column(nullable = false)
     private String phone;
 
     @Column(name = "profile_image_url")

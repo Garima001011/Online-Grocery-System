@@ -22,13 +22,16 @@ public class AuthController {
         public String email;
         public String password;
         public String role;
+        public String phone;
     }
 
-    // Register (for testing)
     @PostMapping("/register")
     public User register(@RequestBody RegisterRequest req) {
         if (req.email == null || req.password == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email and password required");
+        }
+        if (req.phone == null || req.phone.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phone number is required");
         }
 
         if (userRepository.findByEmail(req.email).isPresent()) {
@@ -39,8 +42,7 @@ public class AuthController {
         user.setEmail(req.email);
         user.setPassword(req.password);
         user.setRole(req.role != null ? req.role : "CUSTOMER");
-
-        // Set name if provided
+        user.setPhone(req.phone);   // ← NEW
         if (req.name != null) {
             user.setName(req.name);
         }
