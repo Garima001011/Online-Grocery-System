@@ -8,10 +8,12 @@ CREATE DATABASE IF NOT EXISTS localgrocery;
 USE localgrocery;
 
 -- ============================================
--- 1. TABLES CREATION
+-- 1. TABLES CREATION (with final schema)
 -- ============================================
 
--- Drop tables if they exist (in correct order due to foreign key constraints)
+-- Drop tables in correct order (respect foreign keys)
+DROP TABLE IF EXISTS delivery_issues;
+DROP TABLE IF EXISTS delivery_sessions;
 DROP TABLE IF EXISTS notification_logs;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS order_items;
@@ -23,7 +25,7 @@ DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS sales_reports;
 DROP VIEW IF EXISTS admin_returns_view;
 
--- Create users table with PHONE column (mandatory)
+-- Create users table (phone is mandatory)
 CREATE TABLE users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -32,15 +34,7 @@ CREATE TABLE users (
     name VARCHAR(255),
     phone VARCHAR(20) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    -- Delivery partner specific fields
-    vehicle_type VARCHAR(50),
-    vehicle_number VARCHAR(50),
-    is_available BOOLEAN DEFAULT TRUE,
-    current_location VARCHAR(255),
-    rating DECIMAL(3,2) DEFAULT 5.0,
-    total_deliveries INT DEFAULT 0,
-    profile_image_url VARCHAR(500)
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Create stores table
@@ -72,7 +66,7 @@ CREATE TABLE products (
     FOREIGN KEY (store_id) REFERENCES stores(id)
 );
 
--- Create orders table
+-- Create orders table (with new columns added)
 CREATE TABLE orders (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     created_at DATETIME(6) NOT NULL,
@@ -94,6 +88,9 @@ CREATE TABLE orders (
     delivered_at DATETIME(6),
     delivery_status VARCHAR(50) DEFAULT 'PENDING',
     payment_status VARCHAR(50) DEFAULT 'PENDING',
+    payment_received_at DATETIME,
+    delivery_proof_image_url VARCHAR(255),
+    cod_collected BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (delivery_user_id) REFERENCES users(id)
 );
@@ -149,6 +146,29 @@ CREATE TABLE sales_reports (
     UNIQUE KEY unique_report_date (report_date)
 );
 
+-- Create delivery_issues table
+CREATE TABLE delivery_issues (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    reported_by_id BIGINT NOT NULL,
+    issue_type VARCHAR(50),
+    description TEXT,
+    status VARCHAR(20) DEFAULT 'OPEN',
+    reported_at DATETIME,
+    resolved_at DATETIME,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (reported_by_id) REFERENCES users(id)
+);
+
+-- Create delivery_sessions table
+CREATE TABLE delivery_sessions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    delivery_person_id BIGINT NOT NULL,
+    start_time DATETIME,
+    end_time DATETIME,
+    FOREIGN KEY (delivery_person_id) REFERENCES users(id)
+);
+
 -- Create admin_returns_view
 CREATE VIEW admin_returns_view AS
 SELECT
@@ -176,12 +196,12 @@ WHERE oi.return_status != 'NONE';
 -- 2. SEED DATA INSERTION
 -- ============================================
 
--- Insert users with PHONE NUMBERS (mandatory)
-INSERT INTO users (email, password, role, name, phone, vehicle_type, vehicle_number, is_available, rating, total_deliveries) VALUES
-('admin@grocery.com', 'admin', 'ADMIN', 'Admin User', '9800000000', NULL, NULL, NULL, NULL, NULL),
-('user@grocery.com', '1234', 'CUSTOMER', 'Regular Customer', '9812345678', NULL, NULL, NULL, NULL, NULL),
-('delivery1@local.com', 'pass123', 'DELIVERY', 'Ram Sharma', '9822222222', 'Motorcycle', 'BA 12 PA 1234', TRUE, 4.8, 150),
-('customer@test.com', 'test123', 'CUSTOMER', 'Test Customer', '9833333333', NULL, NULL, NULL, NULL, NULL);
+-- Insert users (with phone numbers)
+INSERT INTO users (email, password, role, name, phone) VALUES
+('admin@grocery.com', 'admin', 'ADMIN', 'Admin User', '9800000000'),
+('user@grocery.com', '1234', 'CUSTOMER', 'Regular Customer', '9812345678'),
+('delivery1@local.com', 'pass123', 'DELIVERY', 'Ram Sharma', '9822222222'),
+('customer@test.com', 'test123', 'CUSTOMER', 'Test Customer', '9833333333');
 
 -- Insert stores
 INSERT INTO stores (name, location, description, image_url) VALUES
@@ -249,15 +269,23 @@ INSERT INTO products (name, price, stock, category_id, store_id, description, im
 ('Pomegranate 1kg', 420, 20, 1, 5, NULL, NULL),
 ('Grapes 500g', 240, 25, 1, 6, NULL, NULL);
 
--- Insert orders (with actual timestamps from your session)
-INSERT INTO orders (id, created_at, delivery_address, status, user_id, payment_method, subtotal, tax, total,
-                    delivery_user_id, assigned_at, picked_up_at, delivered_at, delivery_status, payment_status) VALUES
-(1, '2026-01-01 22:47:57.028188', 'Itahari-6, Near Sathi Petrol Pump', 'DELIVERED', 2, 'COD', 0.00, 0.00, 0.00,
- 3, '2026-01-01 23:29:52.951529', '2026-01-01 23:30:33.248970', '2026-01-01 23:30:33.317189', 'DELIVERED', 'PAID'),
-(2, '2026-01-01 22:52:18.713492', 'Sathi Pertrol Pump', 'PLACED', 4, 'COD', 0.00, 0.00, 0.00,
- NULL, NULL, NULL, NULL, 'PENDING', 'PENDING'),
-(3, NOW(), 'Biratnagar-10', 'PLACED', 2, 'COD', 500.00, 65.00, 565.00,
- NULL, NULL, NULL, NULL, 'PENDING', 'PENDING');
+-- Insert orders (with new columns set to NULL / FALSE)
+INSERT INTO orders (
+    id, created_at, delivery_address, status, user_id, payment_method,
+    subtotal, tax, total, delivery_user_id, assigned_at, picked_up_at,
+    delivered_at, delivery_status, payment_status,
+    payment_received_at, delivery_proof_image_url, cod_collected
+) VALUES
+(1, '2026-01-01 22:47:57.028188', 'Itahari-6, Near Sathi Petrol Pump', 'DELIVERED', 2, 'COD',
+ 0.00, 0.00, 0.00, 3, '2026-01-01 23:29:52.951529', '2026-01-01 23:30:33.248970',
+ '2026-01-01 23:30:33.317189', 'DELIVERED', 'PAID',
+ NULL, NULL, FALSE),
+(2, '2026-01-01 22:52:18.713492', 'Sathi Pertrol Pump', 'PLACED', 4, 'COD',
+ 0.00, 0.00, 0.00, NULL, NULL, NULL, NULL, 'PENDING', 'PENDING',
+ NULL, NULL, FALSE),
+(3, NOW(), 'Biratnagar-10', 'PLACED', 2, 'COD',
+ 500.00, 65.00, 565.00, NULL, NULL, NULL, NULL, 'PENDING', 'PENDING',
+ NULL, NULL, FALSE);
 
 -- Reset auto increment for orders
 ALTER TABLE orders AUTO_INCREMENT = 4;
@@ -268,11 +296,20 @@ INSERT INTO order_items (price_at_purchase, quantity, order_id, product_id, retu
 (130, 1, 1, 3, 'NONE'),
 (1.99, 31, 2, 1, 'NONE');
 
--- ============================================
--- 3. SETUP SCRIPT FOR QUICK START
--- ============================================
+-- Insert notifications
+INSERT INTO notifications (title, message, notification_type, target_audience, status) VALUES
+('Welcome to LocalGrocery!', 'Get 20% off on your first order. Use code: WELCOME20', 'OFFER', 'CUSTOMERS', 'SENT'),
+('New Store Added', 'Bhatbhateni Itahari is now available for delivery', 'INFO', 'ALL', 'SENT'),
+('Festival Sale', 'Diwali special discounts on all groceries', 'DEAL', 'ALL', 'SCHEDULED');
 
--- Display summary of seeded data
+-- Insert sales reports
+INSERT INTO sales_reports (report_date, total_orders, total_revenue, total_customers, avg_order_value) VALUES
+(CURDATE() - INTERVAL 1 DAY, 15, 12500.50, 8, 833.37),
+(CURDATE(), 8, 8560.25, 5, 1070.03);
+
+-- ============================================
+-- 3. SUMMARY
+-- ============================================
 SELECT 'Database Setup Complete!' AS message;
 
 SELECT
@@ -282,55 +319,8 @@ SELECT
     (SELECT COUNT(*) FROM products) AS total_products,
     (SELECT COUNT(*) FROM orders) AS total_orders;
 
--- Show user credentials for testing (now includes phone)
 SELECT '=== TEST CREDENTIALS ===' AS info;
 SELECT id, email, password, role, name, phone FROM users;
 
--- Show available endpoints (example)
-SELECT '=== SAMPLE API ENDPOINTS ===' AS info;
-SELECT
-    'POST /api/auth/login' AS endpoint,
-    'User authentication' AS description
-UNION ALL
-SELECT
-    'GET /api/products',
-    'List all products'
-UNION ALL
-SELECT
-    'GET /api/stores',
-    'List all stores'
-UNION ALL
-SELECT
-    'POST /api/orders',
-    'Create new order';
-
--- ============================================
--- 4. OPTIONAL: ADDITIONAL SAMPLE DATA
--- ============================================
-
--- Add some sample notifications
-INSERT INTO notifications (title, message, notification_type, target_audience, status) VALUES
-('Welcome to LocalGrocery!', 'Get 20% off on your first order. Use code: WELCOME20', 'OFFER', 'CUSTOMERS', 'SENT'),
-('New Store Added', 'Bhatbhateni Itahari is now available for delivery', 'INFO', 'ALL', 'SENT'),
-('Festival Sale', 'Diwali special discounts on all groceries', 'DEAL', 'ALL', 'SCHEDULED');
-
--- Add a sample sales report
-INSERT INTO sales_reports (report_date, total_orders, total_revenue, total_customers, avg_order_value) VALUES
-(CURDATE() - INTERVAL 1 DAY, 15, 12500.50, 8, 833.37),
-(CURDATE(), 8, 8560.25, 5, 1070.03);
-
--- ============================================
--- 5. DATABASE CONFIGURATION
--- ============================================
-
--- Set root password (as you did in your session)
--- Note: This needs to be run separately in MySQL shell
--- ALTER USER 'root'@'localhost' IDENTIFIED BY 'admin';
--- FLUSH PRIVILEGES;
-
--- Show final configuration
 SELECT '=== DATABASE READY ===' AS status;
-SELECT
-    @@version AS mysql_version,
-    DATABASE() AS current_database,
-    NOW() AS seed_executed_at;
+SELECT @@version AS mysql_version, DATABASE() AS current_database, NOW() AS seed_executed_at;
