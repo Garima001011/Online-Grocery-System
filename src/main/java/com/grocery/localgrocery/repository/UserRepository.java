@@ -17,6 +17,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Count users by role
     long countByRole(String role);
 
+    Optional<User> findByResetToken(String resetToken);
+
     // Find active delivery persons
     @Query("SELECT u FROM User u WHERE u.role = 'DELIVERY' AND u.isAvailable = true")
     List<User> findAvailableDeliveryPersons();

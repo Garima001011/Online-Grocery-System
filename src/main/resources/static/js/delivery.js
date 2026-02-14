@@ -3,6 +3,7 @@
 let user = null;
 let currentOrders = [];
 let selectedOrderId = null;
+let locationWatchId = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   user = JSON.parse(localStorage.getItem("user") || "null");
@@ -27,6 +28,14 @@ async function initDeliveryDashboard() {
 
   await loadMyOrders();
   await loadDeliveryStats();
+
+  // Load earnings summary (default daily)
+  await loadEarningsSummary('daily');
+
+  // Start location sharing if user is online/available
+  if (user.isAvailable) {
+    startLocationSharing();
+  }
 
   // Auto-refresh every 30 seconds
   setInterval(async () => {
@@ -216,10 +225,12 @@ async function showOrderDetails(orderId) {
   setText("orderTotal", `Rs. ${formatNpr(order.total || 0)}`);
   setText("orderTotalQuick", formatNpr(order.total || 0));
 
-  // Buttons state
+  // Buttons state based on status
   const btnPickup = document.getElementById("btnPickup");
+  const btnPaymentReceived = document.getElementById("btnPaymentReceived");
   const btnDeliver = document.getElementById("btnDeliver");
   const btnCancel = document.getElementById("btnCancel");
+  const codCheckboxLabel = document.getElementById("codCheckboxLabel");
 
   if (btnPickup) {
     btnPickup.disabled = order.status !== "ASSIGNED";
@@ -228,8 +239,42 @@ async function showOrderDetails(orderId) {
         ? '<i class="fas fa-check"></i> Picked Up'
         : '<i class="fas fa-box"></i> Pick Up';
   }
-  if (btnDeliver) btnDeliver.disabled = order.status !== "PICKED_UP";
+
+  // Show payment received button only when order is PICKED_UP
+  if (btnPaymentReceived && codCheckboxLabel) {
+    if (order.status === "PICKED_UP") {
+      btnPaymentReceived.style.display = "inline-flex";
+      // Show COD checkbox only if payment method is COD
+      if (order.paymentMethod === "COD") {
+        codCheckboxLabel.style.display = "inline-block";
+      } else {
+        codCheckboxLabel.style.display = "none";
+      }
+    } else {
+      btnPaymentReceived.style.display = "none";
+      codCheckboxLabel.style.display = "none";
+    }
+  }
+
+  if (btnDeliver) btnDeliver.disabled = order.status !== "PAYMENT_RECEIVED";
   if (btnCancel) btnCancel.disabled = order.status === "CANCELLED" || order.status === "DELIVERED";
+
+  // Show proof if exists
+  const proofUploaded = document.getElementById('proofUploaded');
+  const proofPreview = document.getElementById('proofImagePreview');
+  if (order.deliveryProofImageUrl) {
+    if (proofUploaded) proofUploaded.innerHTML = '✅ Uploaded';
+    if (proofPreview) {
+      proofPreview.style.display = 'block';
+      proofPreview.innerHTML = `<img src="${order.deliveryProofImageUrl}" alt="Delivery Proof">`;
+    }
+  } else {
+    if (proofUploaded) proofUploaded.innerHTML = '';
+    if (proofPreview) {
+      proofPreview.style.display = 'none';
+      proofPreview.innerHTML = '';
+    }
+  }
 
   const notesEl = document.getElementById("deliveryNotes");
   if (notesEl) notesEl.value = order.deliveryNotes || "";
@@ -293,10 +338,11 @@ function renderTimeline(order) {
     { key: "PLACED", label: "Placed", time: order.createdAt },
     { key: "ASSIGNED", label: "Assigned", time: order.assignedAt },
     { key: "PICKED_UP", label: "Picked Up", time: order.pickedUpAt },
+    { key: "PAYMENT_RECEIVED", label: "Payment", time: order.paymentReceivedAt },
     { key: "DELIVERED", label: "Delivered", time: order.deliveredAt },
   ];
 
-  const statusOrder = ["PLACED", "ASSIGNED", "PICKED_UP", "DELIVERED"];
+  const statusOrder = ["PLACED", "ASSIGNED", "PICKED_UP", "PAYMENT_RECEIVED", "DELIVERED"];
   const currentIndex = statusOrder.indexOf(order.status);
 
   timeline.innerHTML = steps
@@ -366,14 +412,33 @@ async function updateStatus(newStatus) {
   const order = (currentOrders || []).find((o) => o.id === selectedOrderId);
   if (!order) return;
 
+  // Validate status transitions
   if (newStatus === "PICKED_UP" && order.status !== "ASSIGNED") {
     alert("Order must be ASSIGNED before it can be picked up");
     return;
   }
-  if (newStatus === "DELIVERED" && order.status !== "PICKED_UP") {
-    alert("Order must be PICKED_UP before it can be delivered");
+  if (newStatus === "PAYMENT_RECEIVED" && order.status !== "PICKED_UP") {
+    alert("Order must be PICKED_UP before confirming payment");
     return;
   }
+  if (newStatus === "DELIVERED" && order.status !== "PAYMENT_RECEIVED") {
+    alert("Payment must be received before delivery");
+    return;
+  }
+
+  // Handle COD collection
+  let codCollected = null;
+  if (newStatus === "PAYMENT_RECEIVED") {
+    if (order.paymentMethod === "COD") {
+      const checkbox = document.getElementById("codCollectedCheckbox");
+      codCollected = checkbox ? checkbox.checked : false;
+      if (!codCollected) {
+        alert("Please confirm COD collection by checking the checkbox");
+        return;
+      }
+    }
+  }
+
   if (!confirm(`Are you sure you want to mark this order as ${newStatus}?`)) return;
 
   try {
@@ -384,6 +449,7 @@ async function updateStatus(newStatus) {
         orderId: selectedOrderId,
         deliveryPersonId: user.id,
         status: newStatus,
+        codCollected: codCollected
       }),
     });
 
@@ -400,10 +466,168 @@ async function updateStatus(newStatus) {
     await showOrderDetails(selectedOrderId);
     updateQuickStats();
 
+    // Refresh earnings after delivery
+    if (newStatus === "DELIVERED") {
+      await loadEarningsSummary('daily');
+    }
+
     alert(`Order status updated to ${newStatus}`);
   } catch (e) {
     console.error("Error updating status:", e);
     alert("Failed to update order status: " + e.message);
+  }
+}
+
+// Load earnings summary
+async function loadEarningsSummary(period = 'daily') {
+  try {
+    const res = await fetch(`/api/delivery/earnings/summary?deliveryPersonId=${user.id}&period=${period}`);
+    if (!res.ok) throw new Error('Failed to load earnings');
+    const data = await res.json();
+
+    document.getElementById('earningsDeliveries').innerText = data.totalDeliveries;
+    document.getElementById('earningsTotal').innerHTML = `Rs. ${formatNpr(data.totalEarnings)}`;
+    document.getElementById('earningsIncentives').innerHTML = `Rs. ${formatNpr(data.incentives)}`;
+    document.getElementById('earningsBonus').innerHTML = `Rs. ${formatNpr(data.bonus)}`;
+
+    // Update performance badge
+    const badgeEl = document.getElementById('performanceBadge');
+    if (badgeEl && data.performanceBadge) {
+      badgeEl.innerText = data.performanceBadge;
+      badgeEl.className = `performance-badge badge-${data.performanceBadge.toLowerCase()}`;
+    } else if (badgeEl) {
+      badgeEl.innerText = '—';
+      badgeEl.className = 'performance-badge';
+    }
+  } catch (e) {
+    console.error('Earnings error:', e);
+  }
+}
+
+function getBadgeColor(badge) {
+  switch(badge) {
+    case 'GOLD': return '#FFD700';
+    case 'SILVER': return '#C0C0C0';
+    case 'BRONZE': return '#CD7F32';
+    default: return 'white';
+  }
+}
+
+// Upload proof photo
+async function handleProofUpload() {
+  const fileInput = document.getElementById('proofFile');
+  const file = fileInput.files[0];
+  if (!file || !selectedOrderId) return;
+
+  const formData = new FormData();
+  formData.append('orderId', selectedOrderId);
+  formData.append('deliveryPersonId', user.id);
+  formData.append('file', file);
+
+  try {
+    const res = await fetch('/api/delivery/upload-proof', {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) throw new Error('Upload failed');
+    const data = await res.json();
+
+    document.getElementById('proofUploaded').innerHTML = '✅ Uploaded';
+
+    // Show preview
+    const preview = document.getElementById('proofImagePreview');
+    preview.style.display = 'block';
+    preview.innerHTML = `<img src="${data.imageUrl}" alt="Delivery Proof">`;
+
+    // Update order in current list
+    const idx = currentOrders.findIndex(o => o.id === selectedOrderId);
+    if (idx !== -1) {
+      currentOrders[idx].deliveryProofImageUrl = data.imageUrl;
+    }
+
+    alert('Proof uploaded successfully');
+  } catch (e) {
+    alert('Proof upload failed: ' + e.message);
+  }
+}
+
+// Report issue
+async function reportIssue() {
+  if (!selectedOrderId) return alert('Select an order first');
+  const issueType = document.getElementById('issueType').value;
+  const description = document.getElementById('issueDescription').value.trim();
+  if (!description) return alert('Please describe the issue');
+
+  try {
+    const res = await fetch('/api/delivery/report-issue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: selectedOrderId,
+        deliveryPersonId: user.id,
+        issueType: issueType,
+        description: description
+      })
+    });
+    if (!res.ok) throw new Error('Failed to report issue');
+    alert('Issue reported successfully');
+    document.getElementById('issueDescription').value = '';
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// Live location sharing
+function startLocationSharing() {
+  if (!navigator.geolocation) return console.log('Geolocation not supported');
+  if (locationWatchId) return;
+
+  locationWatchId = navigator.geolocation.watchPosition(
+    async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        await fetch('/api/delivery/location', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deliveryPersonId: user.id, latitude, longitude })
+        });
+      } catch (e) {
+        console.error('Location update failed', e);
+      }
+    },
+    (err) => console.error('Geolocation error:', err),
+    { enableHighAccuracy: true, maximumAge: 30000, timeout: 27000 }
+  );
+}
+
+function stopLocationSharing() {
+  if (locationWatchId) {
+    navigator.geolocation.clearWatch(locationWatchId);
+    locationWatchId = null;
+  }
+}
+
+// Online status toggle
+async function toggleOnlineStatus() {
+  const newStatus = !user.onlineStatus;
+
+  try {
+    const res = await fetch('/api/delivery/online-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deliveryPersonId: user.id,
+        online: newStatus
+      })
+    });
+    if (!res.ok) throw new Error('Failed to update online status');
+
+    user.onlineStatus = newStatus;
+    localStorage.setItem('user', JSON.stringify(user));
+
+    alert(`You are now ${newStatus ? 'Online' : 'Offline'}`);
+  } catch (e) {
+    alert('Error updating online status');
   }
 }
 
@@ -465,6 +689,13 @@ async function toggleAvailability() {
     user.isAvailable = newAvailability;
     localStorage.setItem("user", JSON.stringify(user));
     updateAvailabilityButton();
+
+    // Start/stop location sharing based on availability
+    if (user.isAvailable) {
+      startLocationSharing();
+    } else {
+      stopLocationSharing();
+    }
 
     alert(`Availability updated: ${newAvailability ? "Available" : "Busy"}`);
   } catch (e) {
@@ -532,6 +763,7 @@ function refreshOrders() {
 }
 
 function logout() {
+  stopLocationSharing();
   localStorage.removeItem("user");
   window.location.href = "/login.html";
 }
@@ -583,3 +815,7 @@ window.toggleAvailability = toggleAvailability;
 window.filterOrders = filterOrders;
 window.getDirections = getDirections;
 window.contactCustomer = contactCustomer;
+window.loadEarningsSummary = loadEarningsSummary;
+window.handleProofUpload = handleProofUpload;
+window.reportIssue = reportIssue;
+window.toggleOnlineStatus = toggleOnlineStatus;

@@ -1,4 +1,3 @@
-// Amazon-like Cart JavaScript
 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 let promoDiscount = 0;
 
@@ -8,12 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('userGreeting').textContent = user.email.split('@')[0];
     }
 
+    cart = cart.map(item => ({ ...item, selected: item.selected !== undefined ? item.selected : true }));
+    saveCart();
+
     loadCart();
     loadRecommendedItems();
     setupPaymentToggle();
 });
 
-// Load cart items
 function loadCart() {
     const cartItemsContainer = document.getElementById('cartItemsContainer');
     const cartSummary = document.querySelector('.checkout-summary');
@@ -37,34 +38,50 @@ function loadCart() {
 
     if (cartSummary) cartSummary.style.display = 'block';
 
-    let cartHTML = '';
+    let cartHTML = `
+        <div style="display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #ddd; margin-bottom: 10px;">
+            <div style="width: 30px; margin-right: 15px;">
+                <input type="checkbox" id="selectAll" ${cart.every(item => item.selected) ? 'checked' : ''} onchange="toggleSelectAll(this.checked)">
+            </div>
+            <div style="flex:1; font-weight: bold;">Product</div>
+            <div style="width: 120px; text-align: center; font-weight: bold;">Quantity</div>
+            <div style="width: 100px; text-align: right; font-weight: bold;">Price</div>
+            <div style="width: 80px; text-align: center; font-weight: bold;">Remove</div>
+        </div>
+    `;
     let subtotal = 0;
 
     cart.forEach((item, index) => {
         const itemTotal = item.price * item.quantity;
-        subtotal += itemTotal;
+        if (item.selected) subtotal += itemTotal;
 
         cartHTML += `
-            <div class="cart-item" id="cartItem-${index}">
-                <div style="display: flex; align-items: center;">
+            <div class="cart-item" id="cartItem-${index}" style="display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid #eee;">
+                <div style="width: 30px; margin-right: 15px;">
+                    <input type="checkbox" ${item.selected ? 'checked' : ''} onchange="toggleItemSelection(${index}, this.checked)">
+                </div>
+                <div style="flex:1; display: flex; align-items: center;">
                     <i class="fas fa-shopping-basket" style="font-size: 60px; color: #ddd; margin-right: 20px;"></i>
                     <div class="cart-item-details">
                         <h3 class="cart-item-title">${item.name}</h3>
                         <div class="cart-item-price">Rs. ${item.price.toFixed(2)}</div>
-
-                        <div class="cart-item-quantity">
-                            <button class="quantity-btn" onclick="updateQuantity(${index}, -1)">-</button>
-                            <input type="text" class="quantity-input" value="${item.quantity}" readonly>
-                            <button class="quantity-btn" onclick="updateQuantity(${index}, 1)">+</button>
-                            <span style="margin-left: 20px;" class="remove-item" onclick="removeItem(${index})">
-                                <i class="fas fa-trash"></i> Delete
-                            </span>
-                        </div>
-
-                        <div style="font-weight: bold; color: var(--amazon-price); margin-top: 10px;">
-                            Rs. ${itemTotal.toFixed(2)}
-                        </div>
                     </div>
+                </div>
+
+                <div class="cart-item-quantity" style="width: 120px; text-align: center;">
+                    <button class="quantity-btn" onclick="updateQuantity(${index}, -1)">-</button>
+                    <input type="text" class="quantity-input" value="${item.quantity}" readonly style="width: 40px; text-align: center;">
+                    <button class="quantity-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                </div>
+
+                <div style="width: 100px; text-align: right; font-weight: bold; color: var(--amazon-price);">
+                    Rs. ${itemTotal.toFixed(2)}
+                </div>
+
+                <div style="width: 80px; text-align: center;">
+                    <span class="remove-item" onclick="removeItem(${index})" style="cursor: pointer; color: #d93025;">
+                        <i class="fas fa-trash"></i>
+                    </span>
                 </div>
             </div>
         `;
@@ -77,7 +94,18 @@ function loadCart() {
     updateOrderSummary(subtotal);
 }
 
-// Update item quantity
+function toggleItemSelection(index, checked) {
+    cart[index].selected = checked;
+    saveCart();
+    loadCart();
+}
+
+function toggleSelectAll(checked) {
+    cart = cart.map(item => ({ ...item, selected: checked }));
+    saveCart();
+    loadCart();
+}
+
 function updateQuantity(index, change) {
     const item = cart[index];
     const newQuantity = item.quantity + change;
@@ -87,15 +115,11 @@ function updateQuantity(index, change) {
         return;
     }
 
-    // Here you would typically check stock with the server
-    // For now, we'll assume stock is available
-
     item.quantity = newQuantity;
     saveCart();
     loadCart();
 }
 
-// Remove item from cart
 function removeItem(index) {
     if (confirm('Are you sure you want to remove this item from your cart?')) {
         cart.splice(index, 1);
@@ -104,12 +128,10 @@ function removeItem(index) {
     }
 }
 
-// Save cart to localStorage
 function saveCart() {
     localStorage.setItem('cart', JSON.stringify(cart));
 }
 
-// Update order summary
 function updateOrderSummary(subtotal) {
     const shipping = 50;
     const tax = subtotal * 0.13;
@@ -120,17 +142,54 @@ function updateOrderSummary(subtotal) {
     document.getElementById('taxAmount').textContent = `Rs. ${tax.toFixed(2)}`;
     document.getElementById('promoDiscount').textContent = `- Rs. ${discount.toFixed(2)}`;
     document.getElementById('orderTotal').textContent = `Rs. ${total.toFixed(2)}`;
+
+    const selectedCount = cart.filter(item => item.selected).length;
+
+    const itemCountEl = document.getElementById('itemCount');
+    if (itemCountEl) {
+        itemCountEl.textContent = selectedCount;
+    }
+
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+        checkoutBtn.textContent = `Proceed to Checkout (${selectedCount} item${selectedCount !== 1 ? 's' : ''})`;
+    }
 }
 
-// Apply promo code
 function applyPromoCode() {
     const promoCode = document.getElementById('promoCode').value.toUpperCase();
     const promoMessage = document.getElementById('promoMessage');
 
     const validCodes = {
-        'WELCOME10': 0.10,
-        'SAVE20': 0.20,
-        'FREESHIP': 0.05
+      //Festivals
+      'DASHAIN10': 0.10,
+      'TIHAR20': 0.20,
+      'HOLI15': 0.15,
+      'CHHATH20': 0.20,
+      'MAGHESANKRANTI10': 0.10,
+      'TEEJ15': 0.15,
+
+      //Nepal's Day
+      'REPUBLIC20': 0.20,
+      'CONSTITUTION25': 0.25,
+      'DEMOCRACY15': 0.15,
+      'NATIONALDAY30': 0.30,
+
+      // 🏔️ Tourism & Pride
+      'EVEREST30': 0.30,
+      'VISITNEPAL20': 0.20,
+      'ANNAPURNA15': 0.15,
+      'LUMBINI25': 0.25,
+
+      // Shopping & Seasonal Sales
+      'NEWYEAR20': 0.20,       // Nepali New Year
+      'MONSOON15': 0.15,
+      'WINTER25': 0.25,
+      'SUMMER10': 0.10,
+
+      // Special Days
+      'STUDENT20': 0.20,
+      'FAMILY40': 0.40         // Highest allowed
     };
 
     if (validCodes[promoCode]) {
@@ -141,12 +200,10 @@ function applyPromoCode() {
         promoMessage.innerHTML = `<span style="color: red;"><i class="fas fa-times-circle"></i> Invalid promo code</span>`;
     }
 
-    // Recalculate totals
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.selected ? item.price * item.quantity : 0), 0);
     updateOrderSummary(subtotal);
 }
 
-// Setup payment method toggle
 function setupPaymentToggle() {
     const paymentRadios = document.querySelectorAll('input[name="payment"]');
     const cardDetails = document.getElementById('cardDetails');
@@ -162,7 +219,6 @@ function setupPaymentToggle() {
     });
 }
 
-// Load recommended items
 async function loadRecommendedItems() {
     const recommendedItems = document.getElementById('recommendedItems');
     if (!recommendedItems) return;
@@ -171,10 +227,7 @@ async function loadRecommendedItems() {
         const response = await fetch('/api/products');
         const products = await response.json();
 
-        // Get 4 random products
-        const randomProducts = [...products]
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 4);
+        const randomProducts = [...products].sort(() => Math.random() - 0.5).slice(0, 4);
 
         recommendedItems.innerHTML = '';
         randomProducts.forEach(product => {
@@ -198,22 +251,11 @@ async function loadRecommendedItems() {
     }
 }
 
-// Add to cart from recommendations
 function addToCartFromRecommendation(productId) {
-    // Add item to cart
-    const item = {
-        productId: productId,
-        quantity: 1
-    };
-
-    // For simplicity, we'll just reload the page
-    // In a real app, you'd make an API call to get product details
     alert('Item added to cart!');
-    // Reload cart
     loadCart();
 }
 
-// Place order
 async function placeOrder() {
     const user = JSON.parse(localStorage.getItem('user'));
     if (!user) {
@@ -230,14 +272,18 @@ async function placeOrder() {
 
     const paymentMethod = document.querySelector('input[name="payment"]:checked').value;
 
-    // Prepare order items
-    const items = cart.map(item => ({
+    const selectedItems = cart.filter(item => item.selected);
+    if (selectedItems.length === 0) {
+        alert('Please select at least one item to checkout');
+        return;
+    }
+
+    const items = selectedItems.map(item => ({
         productId: item.productId,
         quantity: item.quantity
     }));
 
-    // Calculate totals
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const shipping = 50;
     const tax = subtotal * 0.13;
     const discount = subtotal * promoDiscount;
@@ -264,14 +310,11 @@ async function placeOrder() {
         if (response.ok) {
             const order = await response.json();
 
-            // Clear cart
-            cart = [];
+            cart = cart.filter(item => !item.selected);
             saveCart();
 
-            // Show success message
             alert(`Order placed successfully! Order ID: ${order.id}`);
 
-            // Redirect to order confirmation page
             window.location.href = `/order-confirmation.html?orderId=${order.id}`;
         } else {
             const error = await response.text();
@@ -282,3 +325,10 @@ async function placeOrder() {
         alert('Failed to place order. Please try again.');
     }
 }
+
+window.toggleItemSelection = toggleItemSelection;
+window.toggleSelectAll = toggleSelectAll;
+window.updateQuantity = updateQuantity;
+window.removeItem = removeItem;
+window.applyPromoCode = applyPromoCode;
+window.placeOrder = placeOrder;

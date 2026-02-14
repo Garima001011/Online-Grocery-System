@@ -1,6 +1,8 @@
 package com.grocery.localgrocery.entity;
 
 import jakarta.persistence.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -54,6 +56,30 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "reset_token")
+    private String resetToken;
+
+    @Column(name = "reset_token_expiry")
+    private LocalDateTime resetTokenExpiry;
+
+    @Column(name = "total_earnings")
+    private BigDecimal totalEarnings = BigDecimal.ZERO;
+
+    @Column(name = "incentives")
+    private BigDecimal incentives = BigDecimal.ZERO;
+
+    @Column(name = "bonus")
+    private BigDecimal bonus = BigDecimal.ZERO;
+
+    @Column(name = "performance_badge")
+    private String performanceBadge; // "GOLD", "SILVER", "BRONZE"
+
+    @Column(name = "online_status")
+    private Boolean onlineStatus = false;
+
+    @Column(name = "last_online_time")
+    private LocalDateTime lastOnlineTime;
+
     // Constructors
     public User() {
         this.createdAt = LocalDateTime.now();
@@ -79,6 +105,17 @@ public class User {
     public Integer getTotalDeliveries() { return totalDeliveries; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public String getResetToken() { return resetToken; }
+    public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
+    public BigDecimal getTotalEarnings() { return totalEarnings; }
+    public BigDecimal getIncentives() { return incentives; }
+    public BigDecimal getBonus() { return bonus; }
+    public String getPerformanceBadge() { return performanceBadge; }
+    public Boolean getOnlineStatus() { return onlineStatus; }
+    public LocalDateTime getLastOnlineTime() { return lastOnlineTime; }
+
+
+
 
     public void setEmail(String email) { this.email = email; }
     public void setPassword(String password) { this.password = password; }
@@ -94,4 +131,12 @@ public class User {
     public void setTotalDeliveries(Integer totalDeliveries) { this.totalDeliveries = totalDeliveries; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+    public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
+    public void setLastOnlineTime(LocalDateTime lastOnlineTime) { this.lastOnlineTime = lastOnlineTime; }
+    public void setTotalEarnings(BigDecimal totalEarnings) {this.totalEarnings = totalEarnings;}
+    public void setIncentives(BigDecimal incentives) {this.incentives = incentives;}
+    public void setBonus(BigDecimal bonus) {this.bonus = bonus;}
+    public void setPerformanceBadge(String performanceBadge) {this.performanceBadge = performanceBadge;}
+    public void setOnlineStatus(Boolean onlineStatus) {this.onlineStatus = onlineStatus;}
 }

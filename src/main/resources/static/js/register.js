@@ -113,6 +113,12 @@ async function handleRegistration() {
         isValid = false;
     }
 
+    // NEW: Password cannot be same as email
+    if (password.toLowerCase() === email.toLowerCase()) {
+        showError('passwordError', 'Password cannot be the same as your email');
+        isValid = false;
+    }
+
     if (password !== confirmPassword) {
         showError('confirmPasswordError', 'Passwords do not match');
         isValid = false;

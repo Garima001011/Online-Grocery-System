@@ -11,12 +11,18 @@ let filters = {
   searchQuery: ""
 };
 
+// ===========================
+// ADDED: Notifications (Promo)
+// ===========================
+let promoNotifications = [];
+
 document.addEventListener("DOMContentLoaded", async () => {
   const userData = localStorage.getItem("user");
 
   if (userData) {
     try {
       user = JSON.parse(userData);
+
       const userGreetingEl = document.getElementById("userGreeting");
       if (userGreetingEl) {
         const userName = user?.name || user?.email?.split("@")?.[0] || "User";
@@ -39,6 +45,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const logoutLink = document.getElementById("logoutLink");
       if (logoutLink) logoutLink.style.display = "inline";
+
     } catch (error) {
       redirectToLogin();
       return;
@@ -60,10 +67,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   await Promise.all([loadStores(), loadCategories(), loadProducts()]);
   setupFilters();
 
+  // ===========================
+  // ADDED: load promo notifications for logged-in users
+  // Requires backend endpoint: GET /api/notifications/my?userId=ID
+  // ===========================
+  if (user?.id) {
+    await loadMyPromoNotifications();
+    // Optional polling
+    setInterval(loadMyPromoNotifications, 30000);
+  }
+
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
       const dropdown = document.getElementById("userDropdown");
       if (dropdown) dropdown.style.display = "none";
+
+      const promoBox = document.getElementById("promoNotificationsBox");
+      if (promoBox) promoBox.style.display = "none";
     }
   });
 });
@@ -190,6 +210,106 @@ function setupFilters() {
     });
   }
 }
+
+// ===========================
+// ADDED: Promo Notifications UI
+// ===========================
+
+async function loadMyPromoNotifications() {
+  try {
+    if (!user?.id) return;
+
+    const res = await fetch(`/api/notifications/my?userId=${user.id}`);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    promoNotifications = Array.isArray(data) ? data : [];
+
+    // Update badge (if you add it in HTML)
+    updatePromoBadgeCount();
+
+    // Render dropdown/list (if container exists)
+    renderPromoNotifications();
+
+  } catch (e) {
+    // silent
+  }
+}
+
+function updatePromoBadgeCount() {
+  const badge = document.getElementById("promoBadge");
+  if (!badge) return;
+
+  const count = promoNotifications.length;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? "inline-block" : "none";
+}
+
+function togglePromoNotifications() {
+  const box = document.getElementById("promoNotificationsBox");
+  if (!box) return;
+
+  const isOpen = box.style.display === "block";
+  box.style.display = isOpen ? "none" : "block";
+
+  if (!isOpen) {
+    setTimeout(() => document.addEventListener("click", closePromoOnOutside), 50);
+  } else {
+    document.removeEventListener("click", closePromoOnOutside);
+  }
+}
+
+function closePromoOnOutside(e) {
+  const box = document.getElementById("promoNotificationsBox");
+  const btn = document.getElementById("promoBell");
+  if (!box || !btn) return;
+
+  if (!box.contains(e.target) && !btn.contains(e.target)) {
+    box.style.display = "none";
+    document.removeEventListener("click", closePromoOnOutside);
+  }
+}
+
+function renderPromoNotifications() {
+  const list = document.getElementById("promoNotificationsList");
+  if (!list) return;
+
+  if (!promoNotifications || promoNotifications.length === 0) {
+    list.innerHTML = `<div style="padding:12px;color:#666;">No notifications</div>`;
+    return;
+  }
+
+  list.innerHTML = "";
+  promoNotifications.slice(0, 10).forEach((row) => {
+    const n = row.notification || {};
+    const sentAt = row.sentAt ? new Date(row.sentAt).toLocaleString() : "";
+
+    const item = document.createElement("div");
+    item.style.cssText = "padding:12px;border-bottom:1px solid #eee;";
+    item.innerHTML = `
+      <div style="font-weight:700;">${escapeHtml(n.title || "Notification")}</div>
+      <div style="margin-top:6px;color:#444;">${escapeHtml(n.message || "")}</div>
+      <div style="margin-top:8px;font-size:12px;color:#999;">${sentAt}</div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+// Export for HTML onclick usage
+window.togglePromoNotifications = togglePromoNotifications;
+
+// ===========================
+// Existing code continues...
+// ===========================
 
 function displayProducts(productsToDisplay) {
   const productsGrid = document.getElementById("productsGrid");

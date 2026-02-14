@@ -98,8 +98,21 @@
         .status-placed { background: rgba(96, 165, 250, 0.2); color: #60a5fa; }
         .status-assigned { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
         .status-picked_up { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+        .status-payment_received { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
         .status-delivered { background: rgba(16, 185, 129, 0.2); color: #10b981; }
         .status-cancelled { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+        .performance-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-gold { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
+        .badge-silver { background: linear-gradient(135deg, #C0C0C0, #808080); color: #000; }
+        .badge-bronze { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #fff; }
 
         .main-container {
             max-width: 1500px;
@@ -366,6 +379,12 @@
             border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
+        .btn-info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
         .btn-warning {
             background: rgba(245, 158, 11, 0.2);
             color: #f59e0b;
@@ -509,6 +528,22 @@
             border-color: var(--amazon-orange);
         }
 
+        .issue-select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            background: var(--amazon-dark);
+            border: 1px solid var(--amazon-border);
+            color: white;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+
+        .issue-select:focus {
+            outline: none;
+            border-color: var(--amazon-orange);
+        }
+
         .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -519,6 +554,19 @@
             font-size: 64px;
             margin-bottom: 16px;
             opacity: 0.5;
+        }
+
+        .proof-preview {
+            margin-top: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--amazon-border);
+        }
+
+        .proof-preview img {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
         }
 
         ::-webkit-scrollbar {
@@ -582,14 +630,21 @@
 
     <nav class="header-nav">
         <div class="nav-item">
+            <div style="font-size: 12px;">Performance Badge</div>
+            <div style="font-weight: bold;">
+                <span id="performanceBadge" class="performance-badge">—</span>
+            </div>
+        </div>
+
+        <div class="nav-item">
             <div style="font-size: 12px;">Hello,</div>
             <div style="font-weight: bold;">
                 <span id="who">Partner</span>
                 <span id="logoutLink" style="display: none; margin-left: 10px;">
-                <a href="#" onclick="window.logout(); return false;" style="color: #d93025; font-size: 12px; text-decoration: none;">
-                    (Sign Out)
-                </a>
-            </span>
+                    <a href="#" onclick="window.logout(); return false;" style="color: #d93025; font-size: 12px; text-decoration: none;">
+                        (Sign Out)
+                    </a>
+                </span>
             </div>
         </div>
 
@@ -621,6 +676,40 @@
         <div class="stat-card">
             <div class="stat-value" id="statRating">5.0</div>
             <div class="stat-label">Rating</div>
+        </div>
+    </div>
+
+    <!-- Earnings Summary Card -->
+    <div class="amazon-card" style="margin-top: 20px;">
+        <div class="card-header">
+            <div>
+                <div class="card-title">Earnings Summary</div>
+                <div class="card-subtitle">Daily / Weekly Performance</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <button class="btn btn-secondary" onclick="loadEarningsSummary('daily')">Daily</button>
+                <button class="btn btn-secondary" onclick="loadEarningsSummary('weekly')">Weekly</button>
+            </div>
+        </div>
+        <div class="card-body" id="earningsSummary">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                <div class="stat-card">
+                    <div class="stat-value" id="earningsDeliveries">0</div>
+                    <div class="stat-label">Deliveries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="earningsTotal">Rs. 0</div>
+                    <div class="stat-label">Earnings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="earningsIncentives">Rs. 0</div>
+                    <div class="stat-label">Incentives</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="earningsBonus">Rs. 0</div>
+                    <div class="stat-label">Bonus</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -754,6 +843,9 @@
                             <button class="btn btn-warning" id="btnPickup" onclick="updateStatus('PICKED_UP')">
                                 <i class="fas fa-box"></i> Pick Up
                             </button>
+                            <button class="btn btn-info" id="btnPaymentReceived" onclick="updateStatus('PAYMENT_RECEIVED')" style="display:none;">
+                                <i class="fas fa-money-bill-wave"></i> Payment Received
+                            </button>
                             <button class="btn btn-success" id="btnDeliver" onclick="updateStatus('DELIVERED')">
                                 <i class="fas fa-check-circle"></i> Deliver
                             </button>
@@ -761,6 +853,39 @@
                                 <i class="fas fa-times-circle"></i> Cancel
                             </button>
                         </div>
+                        <label style="margin-top: 10px; display: none;" id="codCheckboxLabel">
+                            <input type="checkbox" id="codCollectedCheckbox" style="margin-right: 8px;">
+                            <span style="color: white;">COD Collected</span>
+                        </label>
+                    </div>
+
+                    <!-- Proof of Delivery -->
+                    <div class="order-details-section">
+                        <div class="section-title">Proof of Delivery</div>
+                        <div>
+                            <input type="file" id="proofFile" accept="image/*" style="display: none;" onchange="handleProofUpload()">
+                            <button class="btn btn-primary" onclick="document.getElementById('proofFile').click()">
+                                <i class="fas fa-camera"></i> Upload Photo
+                            </button>
+                            <span id="proofUploaded" style="margin-left: 10px; color: #10b981;"></span>
+                        </div>
+                        <div class="proof-preview" id="proofImagePreview" style="display: none;"></div>
+                    </div>
+
+                    <!-- Report an Issue -->
+                    <div class="order-details-section">
+                        <div class="section-title">Report an Issue</div>
+                        <select id="issueType" class="issue-select">
+                            <option value="WRONG_ITEM">Wrong Item</option>
+                            <option value="DAMAGED">Damaged Product</option>
+                            <option value="ADDRESS_ISSUE">Address Issue</option>
+                            <option value="CUSTOMER_NOT_AVAILABLE">Customer Not Available</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                        <textarea id="issueDescription" class="notes-textarea" placeholder="Describe the issue..."></textarea>
+                        <button class="btn btn-warning" onclick="reportIssue()">
+                            <i class="fas fa-exclamation-triangle"></i> Report Issue
+                        </button>
                     </div>
 
                     <!-- Delivery Notes -->

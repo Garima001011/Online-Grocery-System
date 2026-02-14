@@ -265,28 +265,38 @@ public class AdminController {
     // Send notification
     @PostMapping("/notifications")
     public Notification sendNotification(@RequestBody NotificationRequest request) {
+
         Notification notification = new Notification();
         notification.setTitle(request.getTitle());
         notification.setMessage(request.getMessage());
         notification.setType(request.getType());
         notification.setTargetAudience(request.getTargetAudience());
         notification.setScheduledFor(request.getScheduledFor());
-        notification.setStatus("SENT");
         notification.setCreatedAt(LocalDateTime.now());
+
+        // Determine status
+        if (request.getScheduledFor() != null &&
+                request.getScheduledFor().isAfter(LocalDateTime.now())) {
+            notification.setStatus("SCHEDULED");
+        } else {
+            notification.setStatus("SENT");
+        }
 
         // Save notification
         notification = notificationRepository.save(notification);
 
-        // Get target users and create logs
-        List<User> targetUsers = getTargetUsers(request.getTargetAudience());
-        for (User user : targetUsers) {
-            NotificationLog log = new NotificationLog();
-            log.setNotification(notification);
-            log.setUser(user);
-            log.setSentAt(LocalDateTime.now());
-            notificationLogRepository.save(log);
-        }
+        // Only create logs immediately if actually sent now
+        if ("SENT".equals(notification.getStatus())) {
+            List<User> targetUsers = getTargetUsers(request.getTargetAudience());
 
+            for (User user : targetUsers) {
+                NotificationLog log = new NotificationLog();
+                log.setNotification(notification);
+                log.setUser(user);
+                log.setSentAt(LocalDateTime.now());
+                notificationLogRepository.save(log);
+            }
+        }
         return notification;
     }
 

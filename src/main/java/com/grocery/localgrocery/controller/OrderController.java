@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -228,5 +229,44 @@ public class OrderController {
 
     public static class ReturnStatusRequest {
         public String status; // APPROVED, REJECTED, REFUNDED
+    }
+
+    public static class CancelOrderRequest {
+        public String reason;
+    }
+
+    @PostMapping("/{orderId}/cancel")
+    public ResponseEntity<?> cancelOrder(@PathVariable Long orderId,
+                                         @RequestBody CancelOrderRequest req,
+                                         @RequestParam Long userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        // Verify order belongs to this user
+        if (!order.getUser().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only cancel your own orders");
+        }
+
+        // Check if order can be cancelled (only PLACED or ASSIGNED)
+        if (!Arrays.asList("PLACED", "ASSIGNED").contains(order.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Order cannot be cancelled at current status: " + order.getStatus());
+        }
+
+        // Update order
+        order.setStatus("CANCELLED");
+        order.setCancelledAt(LocalDateTime.now());
+        order.setCancelledBy(userId);
+        order.setCancelledReason(req.reason != null ? req.reason : "Customer requested cancellation");
+
+        // If payment was made, you might want to mark as refund_pending, but for now keep as is
+        order.setPaymentStatus("CANCELLED"); // optional
+
+        orderRepository.save(order);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Order cancelled successfully",
+                "orderId", orderId
+        ));
     }
 }

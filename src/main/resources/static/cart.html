@@ -67,7 +67,7 @@
                 <h3 class="summary-title">Order Summary</h3>
 
                 <div class="summary-row">
-                    <span>Items (0):</span>
+                    <span>Items (<span id="itemCount">0</span>):</span>
                     <span id="itemsSubtotal">Rs. 0</span>
                 </div>
 
@@ -133,7 +133,7 @@
                     </div>
                 </div>
 
-                <button class="checkout-btn" onclick="placeOrder()">
+                <button class="checkout-btn" id="checkoutBtn" onclick="placeOrder()">
                     Proceed to Checkout
                 </button>
 

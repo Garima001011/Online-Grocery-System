@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Online Grocery - Amazon Style</title>
-    <link rel="stylesheet" href="/css/customer.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/customer.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 </head>
 <body>
 
@@ -31,30 +31,114 @@
             <option value="dairy">Dairy</option>
             <option value="snacks">Snacks</option>
         </select>
-        <input type="text" class="search-input" id="searchInput" placeholder="Search for groceries, staples, and more...">
+        <input
+                type="text"
+                class="search-input"
+                id="searchInput"
+                placeholder="Search for groceries, staples, and more..."
+        />
         <button class="search-button" onclick="searchProducts()">
             <i class="fas fa-search"></i>
         </button>
     </div>
 
     <nav class="header-nav">
+
+        <!-- LEFT: Greeting -->
         <div class="nav-item" style="margin-right: 10px;">
             <div style="font-size: 12px;">Hello,</div>
             <div style="font-weight: bold;">
                 <span id="userGreeting">Sign in</span>
                 <span id="logoutLink" style="display: none; margin-left: 10px;">
-          <a href="#" onclick="return logout();" style="color: #d93025; font-size: 12px; text-decoration: none;">
+          <a
+                  href="#"
+                  onclick="return logout();"
+                  style="color: #d93025; font-size: 12px; text-decoration: none;"
+          >
             (Sign Out)
           </a>
         </span>
             </div>
         </div>
 
+        <!-- NEW: Notifications Bell -->
+        <div class="nav-item" style="margin-right: 10px; position: relative;">
+            <div
+                    id="promoBell"
+                    onclick="togglePromoNotifications()"
+                    style="cursor: pointer; display: flex; align-items: center; gap: 8px;"
+                    title="Notifications"
+            >
+                <div style="position: relative; font-size: 22px;">
+                    <i class="fas fa-bell"></i>
+                    <span
+                            id="promoBadge"
+                            style="
+              display: none;
+              position: absolute;
+              top: -6px;
+              right: -8px;
+              background: #d93025;
+              color: #fff;
+              border-radius: 999px;
+              padding: 2px 6px;
+              font-size: 11px;
+              line-height: 1;
+              min-width: 18px;
+              text-align: center;
+            "
+                    >0</span>
+                </div>
+                <div style="font-weight: bold;">Alerts</div>
+            </div>
+
+            <!-- Dropdown box -->
+            <div
+                    id="promoNotificationsBox"
+                    style="
+          display: none;
+          position: absolute;
+          right: 0;
+          top: 42px;
+          width: 340px;
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 10px;
+          box-shadow: 0 12px 30px rgba(0,0,0,.15);
+          z-index: 2500;
+          overflow: hidden;
+        "
+            >
+                <div
+                        style="
+            padding: 12px 14px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fafafa;
+          "
+                >
+                    <div style="font-weight: 800;">Notifications</div>
+                    <div style="font-size: 12px; color: #666;">Promos & updates</div>
+                </div>
+
+                <div
+                        id="promoNotificationsList"
+                        style="max-height: 360px; overflow: auto;"
+                >
+                    <div style="padding: 12px; color: #666;">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders -->
         <a href="/orders.html" class="nav-item" style="margin-right: 10px;">
             <div style="font-size: 12px;">Returns</div>
             <div style="font-weight: bold;">& Orders</div>
         </a>
 
+        <!-- Cart -->
         <a href="/cart.html" class="nav-item cart-container">
             <div style="font-size: 25px; position: relative;">
                 <i class="fas fa-shopping-cart"></i>
@@ -62,6 +146,7 @@
             </div>
             <div style="font-weight: bold; margin-top: -5px;">Cart</div>
         </a>
+
     </nav>
 </header>
 
@@ -74,7 +159,12 @@
                 <select class="search-select" id="heroSearchCategory">
                     <option value="all">All Categories</option>
                 </select>
-                <input type="text" class="search-input" id="heroSearchInput" placeholder="Try 'Rice', 'Daal', 'Milk'...">
+                <input
+                        type="text"
+                        class="search-input"
+                        id="heroSearchInput"
+                        placeholder="Try 'Rice', 'Daal', 'Milk'..."
+                />
                 <button class="search-button" onclick="searchProducts()">
                     <i class="fas fa-search"></i> Search
                 </button>
@@ -98,19 +188,29 @@
 
             <div class="filter-section">
                 <div class="filter-title">Price Range</div>
-                <input type="range" min="0" max="5000" value="5000" class="price-range" id="priceRange">
+                <input type="range" min="0" max="5000" value="5000" class="price-range" id="priceRange" />
                 <div>Up to: Rs. <span id="priceValue">5000</span></div>
             </div>
 
             <div class="filter-section">
                 <div class="filter-title">Availability</div>
                 <label class="filter-option">
-                    <input type="checkbox" id="inStockOnly" checked>
+                    <input type="checkbox" id="inStockOnly" checked />
                     In stock only
                 </label>
             </div>
 
-            <button onclick="applyFilters()" style="width: 100%; padding: 10px; background: var(--amazon-orange); border: none; border-radius: 4px; cursor: pointer;">
+            <button
+                    onclick="applyFilters()"
+                    style="
+          width: 100%;
+          padding: 10px;
+          background: var(--amazon-orange);
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        "
+            >
                 Apply Filters
             </button>
         </div>
@@ -118,7 +218,11 @@
         <div style="flex: 1;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h2>Fresh Picks for You</h2>
-                <select id="sortBy" onchange="sortProducts()" style="padding: 8px; border: 1px solid var(--amazon-border); border-radius: 4px;">
+                <select
+                        id="sortBy"
+                        onchange="sortProducts()"
+                        style="padding: 8px; border: 1px solid var(--amazon-border); border-radius: 4px;"
+                >
                     <option value="default">Sort by: Featured</option>
                     <option value="price_asc">Price: Low to High</option>
                     <option value="price_desc">Price: High to Low</option>

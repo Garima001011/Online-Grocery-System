@@ -214,6 +214,34 @@
     </div>
 </div>
 
+<!-- Cancel Order Modal -->
+<div id="cancelModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 400px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">Cancel Order</h2>
+            <button onclick="closeCancelModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">
+                &times;
+            </button>
+        </div>
+        <p>Are you sure you want to cancel this order?</p>
+        <div class="form-group">
+            <label class="form-label">Reason (optional)</label>
+            <textarea id="cancelReason" class="form-input" rows="3" placeholder="Tell us why you're cancelling..."></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <button type="button" class="auth-button" onclick="closeCancelModal()"
+                    style="background: #f0f2f2; color: #0f1111; flex: 1;">
+                No, Keep Order
+            </button>
+            <button type="button" class="auth-button" onclick="confirmCancel()"
+                    style="background: #dc3545; color: white; flex: 2;">
+                Yes, Cancel Order
+            </button>
+        </div>
+        <input type="hidden" id="cancelOrderId">
+    </div>
+</div>
+
 <script src="/js/orders.js"></script>
 </body>
 </html>

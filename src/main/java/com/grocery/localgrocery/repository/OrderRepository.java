@@ -3,7 +3,6 @@ package com.grocery.localgrocery.repository;
 import com.grocery.localgrocery.entity.Order;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,7 +18,15 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
 
-    // Fixed: Use native query for limit
+    List<Order> findByCancelledAtIsNotNull();
+
     @Query(value = "SELECT * FROM orders ORDER BY created_at DESC LIMIT ?1", nativeQuery = true)
     List<Order> findTopNByOrderByCreatedAtDesc(int limit);
+
+    // Add this method:
+    List<Order> findByDeliveryPersonIdAndStatusAndDeliveredAtBetween(
+            Long deliveryPersonId,
+            String status,
+            LocalDateTime start,
+            LocalDateTime end);
 }

@@ -42,6 +42,24 @@ public class Order {
     @Column(nullable = false)
     private String paymentMethod;
 
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
+    @Column(name = "cancelled_by")
+    private Long cancelledBy; // ID of user who cancelled (customer or admin)
+
+    @Column(name = "cancel_reason")
+    private String cancelReason;
+
+    @Column(name = "payment_received_at")
+    private LocalDateTime paymentReceivedAt;
+
+    @Column(name = "delivery_proof_image_url")
+    private String deliveryProofImageUrl;
+
+    @Column(name = "cod_collected")
+    private Boolean codCollected = false;
+
     private String cardBrand;
     private String cardLast4;
     private String cardExpiry;
@@ -96,6 +114,12 @@ public class Order {
     public LocalDateTime getDeliveredAt() { return deliveredAt; }
     public String getPaymentStatus() { return paymentStatus; }
     public List<OrderItem> getItems() { return items; }
+    public LocalDateTime getCancelledAt() { return cancelledAt; }
+    public Long getCancelledBy() { return cancelledBy; }
+    public String getCancelledReason() { return cancelReason; }
+    public Boolean getCodCollected() {return codCollected;}
+    public LocalDateTime getPaymentReceivedAt() {return paymentReceivedAt;}
+    public String getDeliveryProofImageUrl() { return deliveryProofImageUrl; }
 
     public void setUser(User user) { this.user = user; }
     public void setDeliveryAddress(String deliveryAddress) { this.deliveryAddress = deliveryAddress; }
@@ -115,4 +139,10 @@ public class Order {
     public void setDeliveredAt(LocalDateTime deliveredAt) { this.deliveredAt = deliveredAt; }
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
     public void setItems(List<OrderItem> items) { this.items = items; }
+    public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+    public void setCancelledBy(Long cancelledBy) { this.cancelledBy = cancelledBy; }
+    public void setCancelledReason(String cancelReason) { this.cancelReason = cancelReason; }
+    public void setCodCollected(Boolean codCollected) { this.codCollected = codCollected; }
+    public void setPaymentReceivedAt(LocalDateTime paymentReceivedAt) { this.paymentReceivedAt = paymentReceivedAt; }
+    public void setDeliveryProofImageUrl(String deliveryProofImageUrl) {this.deliveryProofImageUrl = deliveryProofImageUrl;}
 }

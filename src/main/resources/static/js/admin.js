@@ -207,11 +207,22 @@ function renderRecentOrders(orders) {
 
     orders.forEach(order => {
         const row = document.createElement('tr');
+
+        const cancelledInfo = order.status === 'CANCELLED'
+            ? `<div style="margin-top:6px;">
+                    <small class="text-muted">
+                        Reason: ${order.cancelReason || 'N/A'}<br>
+                        Cancelled: ${formatDate(order.cancelledAt)}
+                    </small>
+               </div>`
+            : '';
+
         row.innerHTML = `
             <td><strong>#${order.id}</strong></td>
             <td>
                 <div>${order.user?.name || 'Unknown'}</div>
                 <small class="text-muted">${order.user?.email || ''}</small>
+                ${cancelledInfo}
             </td>
             <td>Rs. ${formatPrice(order.total)}</td>
             <td><span class="status-badge-admin status-${order.status.toLowerCase()}">${order.status}</span></td>
@@ -222,6 +233,7 @@ function renderRecentOrders(orders) {
                 </button>
             </td>
         `;
+
         tbody.appendChild(row);
     });
 }
@@ -421,7 +433,115 @@ function viewOrderDetails(orderId) {
     // You can implement modal or detailed view here
 }
 
-// Catalog Management
+/* ===========================
+   ADDED: Orders Tab Functions
+   =========================== */
+
+// Load all orders for the Orders tab
+async function loadOrders() {
+    try {
+        const response = await fetch('/api/orders');
+        if (response.ok) {
+            const orders = await response.json();
+            renderOrdersTable(orders);
+        } else {
+            console.error('Failed to load orders');
+        }
+    } catch (error) {
+        console.error('Error loading orders:', error);
+    }
+}
+
+// Render orders in the admin orders table
+function renderOrdersTable(orders) {
+    const tbody = document.querySelector('#ordersTable tbody');
+    tbody.innerHTML = '';
+
+    orders.forEach(order => {
+        const row = document.createElement('tr');
+        const itemsCount = order.items ? order.items.length : 0;
+
+        const cancelledInfo = order.status === 'CANCELLED'
+            ? `<div style="margin-top:4px;">
+                    <small class="text-muted">Reason: ${order.cancelReason || 'N/A'}<br>
+                    Cancelled: ${formatDate(order.cancelledAt)}</small>
+               </div>`
+            : '';
+
+        row.innerHTML = `
+            <td><strong>#${order.id}</strong></td>
+            <td>
+                <div>${order.user?.name || 'Unknown'}</div>
+                <small class="text-muted">${order.user?.email || ''}</small>
+                ${cancelledInfo}
+            </td>
+            <td>${itemsCount} item${itemsCount !== 1 ? 's' : ''}</td>
+            <td>Rs. ${formatPrice(order.total)}</td>
+            <td><span class="status-badge-admin status-${order.status.toLowerCase()}">${order.status}</span></td>
+            <td>${order.paymentStatus || 'PENDING'}</td>
+            <td>${formatDate(order.createdAt)}</td>
+            <td>
+                <button class="action-btn action-edit" onclick="viewOrderDetails(${order.id})">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+/* ===========================
+   ADDED: Marketing Tab Loader
+   =========================== */
+
+async function loadMarketing() {
+    await loadNotifications();
+    // Optionally load campaign chart data here
+}
+
+/* ===========================
+   ADDED: Analytics Tab Loader
+   =========================== */
+
+async function loadAnalytics() {
+    try {
+        // Load top products
+        const topProductsResponse = await fetch('/api/admin/products/top?limit=10');
+        if (topProductsResponse.ok) {
+            const topProducts = await topProductsResponse.json();
+            renderTopProducts(topProducts);
+        }
+
+        // Load customer analytics (placeholder)
+        const tbody = document.querySelector('#customerAnalyticsTable tbody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr><td colspan="5" style="text-align:center;">Customer analytics coming soon</td></tr>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading analytics:', error);
+    }
+}
+
+function renderTopProducts(products) {
+    const container = document.getElementById('topProductsList');
+    if (!container) return;
+
+    container.innerHTML = '';
+    products.forEach(p => {
+        container.innerHTML += `
+            <div style="margin-bottom: 10px; padding: 8px; border-bottom: 1px solid #eee;">
+                <strong>${p.product?.name || 'Unknown Product'}</strong> - Sold: ${p.salesCount || 0}
+            </div>
+        `;
+    });
+}
+
+/* ===========================
+   Catalog Management
+   =========================== */
+
 async function loadCatalog() {
     await loadCategories();
     await loadStores();
@@ -547,7 +667,7 @@ async function addProduct() {
         });
 
         if (response.ok) {
-            const product = await response.json();
+            await response.json();
             alert('Product added successfully!');
 
             // Clear form
@@ -608,7 +728,7 @@ async function sendNotification() {
         message,
         type,
         targetAudience: audience,
-        scheduledFor: schedule || null
+        scheduledFor: schedule ? schedule.replace(' ', 'T') + ':00' : null
     };
 
     try {
@@ -621,7 +741,7 @@ async function sendNotification() {
         });
 
         if (response.ok) {
-            const notification = await response.json();
+            await response.json();
             alert('Notification sent successfully!');
 
             // Clear form
@@ -849,7 +969,7 @@ async function addDeliveryPartner() {
         });
 
         if (response.ok) {
-            const user = await response.json();
+            await response.json();
             alert('Delivery partner added successfully!');
 
             // Clear form
@@ -996,14 +1116,11 @@ function renderUsersList(users) {
 
 // Filter users by role
 async function filterUsers(role) {
-    // For now, we'll just reload all users
-    // In a real app, you'd filter on backend or client-side
     await loadAllUsers();
 }
 
 // Search users
 function searchUsers(query) {
-    // Implement client-side search
     const items = document.querySelectorAll('#usersList .notification-item');
     items.forEach(item => {
         const text = item.textContent.toLowerCase();
@@ -1039,7 +1156,6 @@ async function addNewUser() {
         phone
     };
 
-    // Add delivery-specific fields if role is DELIVERY
     if (role === 'DELIVERY') {
         userData.vehicleType = document.getElementById('newUserVehicle').value.trim();
         userData.vehicleNumber = document.getElementById('newUserVehicleNumber').value.trim();
@@ -1048,8 +1164,6 @@ async function addNewUser() {
     }
 
     try {
-        // For now, we'll use the delivery-partners endpoint for DELIVERY role
-        // For other roles, you might need a different endpoint
         const endpoint = role === 'DELIVERY' ? '/api/admin/delivery-partners' : '/api/auth/register';
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -1060,7 +1174,7 @@ async function addNewUser() {
         });
 
         if (response.ok) {
-            const user = await response.json();
+            await response.json();
             alert('User added successfully!');
 
             // Clear form
@@ -1072,7 +1186,6 @@ async function addNewUser() {
             document.getElementById('newUserVehicleNumber').value = '';
             document.getElementById('newUserLocation').value = '';
 
-            // Refresh users list
             await loadAllUsers();
             await loadUserStats();
         } else {
@@ -1088,7 +1201,6 @@ async function addNewUser() {
 // Utility Functions
 function formatPrice(price) {
     if (typeof price === 'object' && price !== null) {
-        // Handle BigDecimal objects
         price = price.toString();
     }
     return new Intl.NumberFormat('en-NP', {
@@ -1160,6 +1272,37 @@ function setupRealtimeUpdates() {
     }, 30000);
 }
 
+/* ===========================
+   UPDATED: Orders Filter Stub
+   =========================== */
+
+function filterOrders(filter) {
+    const rows = document.querySelectorAll('#ordersTable tbody tr');
+    rows.forEach(row => {
+        const statusCell = row.querySelector('td:nth-child(5) .status-badge-admin');
+        if (!statusCell) return;
+
+        const status = statusCell.textContent.trim().toLowerCase();
+
+        if (filter === 'all') {
+            row.style.display = '';
+        } else if (filter === 'today') {
+            const dateCell = row.querySelector('td:nth-child(7)');
+            if (dateCell && new Date(dateCell.textContent).toDateString() === new Date().toDateString()) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        } else if (filter === 'pending') {
+            row.style.display = ['placed', 'assigned', 'picked_up'].includes(status) ? '' : 'none';
+        } else if (filter === 'delivered') {
+            row.style.display = status === 'delivered' ? '' : 'none';
+        } else if (filter === 'cancelled') {
+            row.style.display = status === 'cancelled' ? '' : 'none';
+        }
+    });
+}
+
 // Export for global use
 window.processReturn = processReturn;
 window.addProduct = addProduct;
@@ -1183,6 +1326,11 @@ window.showCatalogTab = showCatalogTab;
 window.addStore = addStore;
 window.searchProducts = searchProducts;
 
+// ADDED exports
+window.loadOrders = loadOrders;
+window.loadMarketing = loadMarketing;
+window.loadAnalytics = loadAnalytics;
+
 // Stub functions for unimplemented features
 function filterReturns(filter) {
     alert('Filter returns by: ' + filter);
@@ -1190,10 +1338,6 @@ function filterReturns(filter) {
 
 function exportReturns() {
     alert('Export returns as CSV');
-}
-
-function filterOrders(filter) {
-    alert('Filter orders by: ' + filter);
 }
 
 function showCatalogTab(tab) {

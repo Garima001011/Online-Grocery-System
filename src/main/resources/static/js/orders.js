@@ -1,9 +1,8 @@
-// Orders JavaScript
 let user = null;
 let orders = [];
 let currentFilter = 'all';
+let currentCancelOrderId = null;
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     user = JSON.parse(localStorage.getItem('user'));
     if (!user) {
@@ -17,7 +16,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
-// Update user greeting
 function updateUserGreeting() {
     const greeting = document.getElementById('userGreeting');
     if (greeting && user) {
@@ -25,7 +23,6 @@ function updateUserGreeting() {
     }
 }
 
-// Update cart count
 function updateCartCount() {
     const cartCount = document.getElementById('cartCount');
     if (cartCount) {
@@ -35,17 +32,14 @@ function updateCartCount() {
     }
 }
 
-// Load orders
 async function loadOrders() {
     try {
         showLoading();
         const response = await fetch(`/api/orders/user/${user.id}`);
         if (response.ok) {
             orders = await response.json();
-            console.log('Loaded orders:', orders); // Debug log
             displayOrders();
         } else {
-            console.error('Failed to load orders');
             showEmptyState();
         }
     } catch (error) {
@@ -56,21 +50,19 @@ async function loadOrders() {
     }
 }
 
-// Display orders
 function displayOrders() {
     const ordersList = document.getElementById('ordersList');
     const emptyOrders = document.getElementById('emptyOrders');
 
     if (!orders || orders.length === 0) {
-        ordersList.innerHTML = '';
-        emptyOrders.style.display = 'block';
+        if (ordersList) ordersList.innerHTML = '';
+        if (emptyOrders) emptyOrders.style.display = 'block';
         return;
     }
 
-    emptyOrders.style.display = 'none';
-    ordersList.innerHTML = '';
+    if (emptyOrders) emptyOrders.style.display = 'none';
+    if (ordersList) ordersList.innerHTML = '';
 
-    // Filter orders based on current selection
     let filteredOrders = orders;
     if (currentFilter === 'delivered') {
         filteredOrders = orders.filter(order => order.status === 'DELIVERED');
@@ -81,6 +73,8 @@ function displayOrders() {
             order.items && order.items.some(item => item.returnStatus && item.returnStatus !== 'NONE')
         );
     }
+
+    if (!ordersList) return;
 
     if (filteredOrders.length === 0) {
         ordersList.innerHTML = `
@@ -98,7 +92,6 @@ function displayOrders() {
     });
 }
 
-// Create order card HTML
 function createOrderCard(order) {
     const orderDate = new Date(order.createdAt).toLocaleDateString('en-US', {
         year: 'numeric',
@@ -106,7 +99,6 @@ function createOrderCard(order) {
         day: 'numeric'
     });
 
-    // Format status for display
     const statusDisplay = {
         'PLACED': 'Order Placed',
         'ASSIGNED': 'Assigned to Delivery',
@@ -134,7 +126,7 @@ function createOrderCard(order) {
                 ` : ''}
             </div>
             <div class="order-status">
-                <span class="status-badge status-${order.status.toLowerCase()}">
+                <span class="status-badge status-${String(order.status).toLowerCase()}">
                     ${statusDisplay}
                 </span>
                 <div style="font-size: 18px; font-weight: bold; color: #b12704; margin-top: 5px;">
@@ -158,13 +150,17 @@ function createOrderCard(order) {
                     onclick="reorder(${order.id})">
                 <i class="fas fa-redo"></i> Buy Again
             </button>
+            ${['PLACED', 'ASSIGNED'].includes(order.status) ? `
+                <button class="auth-button" style="padding: 8px 16px; font-size: 14px; background: #dc3545; color: white; margin-left: 10px;"
+                        onclick="showCancelModal(${order.id})">
+                    <i class="fas fa-times-circle"></i> Cancel Order
+                </button>
+            ` : ''}
         </div>
     `;
-
     return card;
 }
 
-// Create order item HTML
 function createOrderItemHTML(item, orderId, orderStatus) {
     const productName = item.product?.name || item.productName || 'Product';
     const priceAtPurchase = item.priceAtPurchase || 0;
@@ -172,20 +168,17 @@ function createOrderItemHTML(item, orderId, orderStatus) {
     const returnStatus = item.returnStatus || 'NONE';
     const refundAmount = item.refundAmount || 0;
 
-    // Create return status badge if applicable
     const returnStatusBadge = returnStatus !== 'NONE' ? `
-        <span class="return-status return-${returnStatus.toLowerCase()}">
+        <span class="return-status return-${String(returnStatus).toLowerCase()}">
             ${returnStatus}${refundAmount > 0 ? ` (Rs. ${refundAmount.toFixed(2)})` : ''}
         </span>
     ` : '';
 
-    // Check if item can be returned
     const isDelivered = orderStatus === 'DELIVERED';
     const isWithinReturnPeriod = isDelivered &&
         (!item.returnRequestedAt || new Date(item.returnRequestedAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
     const canReturn = returnStatus === 'NONE' && isDelivered && isWithinReturnPeriod;
 
-    // Get product image or icon
     const productIcon = getProductIcon(productName);
 
     return `
@@ -215,9 +208,8 @@ function createOrderItemHTML(item, orderId, orderStatus) {
     `;
 }
 
-// Get product icon based on name
 function getProductIcon(productName) {
-    const name = productName.toLowerCase();
+    const name = String(productName || '').toLowerCase();
 
     if (name.includes('rice') || name.includes('dal') || name.includes('daal') || name.includes('grain')) {
         return '<i class="fas fa-seedling" style="font-size: 40px; color: #999;"></i>';
@@ -238,37 +230,33 @@ function getProductIcon(productName) {
     }
 }
 
-// Filter orders
 function filterOrders(filter) {
     currentFilter = filter;
 
-    // Update active tab
     document.querySelectorAll('.order-tab').forEach(tab => {
         tab.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (typeof event !== 'undefined' && event?.target) {
+        event.target.classList.add('active');
+    }
 
     displayOrders();
 }
 
-// Request return
 function requestReturn(orderId, itemId, itemName, itemPrice) {
     document.getElementById('returnOrderId').value = orderId;
     document.getElementById('returnItemId').value = itemId;
     document.getElementById('returnItemName').textContent = itemName;
     document.getElementById('returnOrderInfo').textContent = `Order #${orderId}`;
     document.getElementById('returnItemPrice').textContent = `Price: Rs. ${itemPrice.toFixed(2)}`;
-
     document.getElementById('returnModal').style.display = 'flex';
 }
 
-// Close return modal
 function closeReturnModal() {
     document.getElementById('returnModal').style.display = 'none';
     document.getElementById('returnForm').reset();
 }
 
-// Submit return request
 async function submitReturnRequest(event) {
     event.preventDefault();
 
@@ -296,10 +284,10 @@ async function submitReturnRequest(event) {
         });
 
         if (response.ok) {
-            const result = await response.json();
+            await response.json();
             alert('Return request submitted successfully! Nepal Can Move Fast will contact you for pickup.');
             closeReturnModal();
-            loadOrders(); // Reload orders
+            loadOrders();
         } else {
             const error = await response.text();
             alert(`Failed to submit return: ${error}`);
@@ -310,17 +298,14 @@ async function submitReturnRequest(event) {
     }
 }
 
-// Show return policy
 function showReturnPolicy() {
     document.getElementById('policyModal').style.display = 'flex';
 }
 
-// Close policy modal
 function closePolicyModal() {
     document.getElementById('policyModal').style.display = 'none';
 }
 
-// Track order
 async function trackOrder(orderId) {
     try {
         const response = await fetch(`/api/orders/${orderId}`);
@@ -355,7 +340,6 @@ async function trackOrder(orderId) {
     }
 }
 
-// Reorder
 async function reorder(orderId) {
     try {
         const response = await fetch(`/api/orders/${orderId}`);
@@ -366,13 +350,16 @@ async function reorder(orderId) {
                 let cart = JSON.parse(localStorage.getItem('cart')) || [];
 
                 order.items.forEach(item => {
-                    const existingItem = cart.find(ci => ci.productId === item.product?.id);
+                    const productId = item.product?.id;
+                    if (!productId) return;
+
+                    const existingItem = cart.find(ci => ci.productId === productId);
 
                     if (existingItem) {
                         existingItem.quantity += item.quantity;
                     } else {
                         cart.push({
-                            productId: item.product?.id,
+                            productId: productId,
                             name: item.product?.name,
                             price: item.priceAtPurchase,
                             quantity: item.quantity
@@ -395,9 +382,8 @@ async function reorder(orderId) {
     }
 }
 
-// Search orders
 function searchOrders() {
-    const searchInput = document.getElementById('searchInput').value.toLowerCase();
+    const searchInput = document.getElementById('searchInput')?.value?.toLowerCase() || '';
     const searchTerm = searchInput.trim();
 
     if (!searchTerm) {
@@ -406,28 +392,26 @@ function searchOrders() {
     }
 
     const filteredOrders = orders.filter(order => {
-        // Search by order ID
-        if (order.id.toString().includes(searchTerm)) return true;
+        if (String(order.id).includes(searchTerm)) return true;
 
-        // Search in order items
         if (order.items) {
             const foundInItems = order.items.some(item => {
                 const itemName = item.product?.name || '';
-                return itemName.toLowerCase().includes(searchTerm);
+                return String(itemName).toLowerCase().includes(searchTerm);
             });
             if (foundInItems) return true;
         }
 
-        // Search in delivery address
-        if (order.deliveryAddress && order.deliveryAddress.toLowerCase().includes(searchTerm)) {
+        if (order.deliveryAddress && String(order.deliveryAddress).toLowerCase().includes(searchTerm)) {
             return true;
         }
 
         return false;
     });
 
-    // Create temporary display
     const ordersList = document.getElementById('ordersList');
+    if (!ordersList) return;
+
     ordersList.innerHTML = '';
 
     if (filteredOrders.length === 0) {
@@ -446,33 +430,78 @@ function searchOrders() {
     });
 }
 
-// Setup event listeners
-function setupEventListeners() {
-    // Return form submission
-    document.getElementById('returnForm').addEventListener('submit', submitReturnRequest);
+function showCancelModal(orderId) {
+    currentCancelOrderId = orderId;
+    const idEl = document.getElementById('cancelOrderId');
+    const reasonEl = document.getElementById('cancelReason');
+    const modalEl = document.getElementById('cancelModal');
 
-    // Close modals on outside click
+    if (idEl) idEl.value = orderId;
+    if (reasonEl) reasonEl.value = '';
+    if (modalEl) modalEl.style.display = 'flex';
+}
+
+function closeCancelModal() {
+    const modalEl = document.getElementById('cancelModal');
+    if (modalEl) modalEl.style.display = 'none';
+    currentCancelOrderId = null;
+}
+
+async function confirmCancel() {
+    const orderId = document.getElementById('cancelOrderId')?.value || currentCancelOrderId;
+    const reason = document.getElementById('cancelReason')?.value?.trim() || '';
+
+    if (!orderId) return;
+
+    try {
+        const response = await fetch(`/api/orders/${orderId}/cancel?userId=${user.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ reason: reason || undefined })
+        });
+
+        if (response.ok) {
+            alert('Order cancelled successfully');
+            closeCancelModal();
+            loadOrders();
+        } else {
+            const error = await response.text();
+            alert(`Failed to cancel order: ${error}`);
+        }
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        alert('Error cancelling order. Please try again.');
+    }
+}
+
+function setupEventListeners() {
+    const returnForm = document.getElementById('returnForm');
+    if (returnForm) {
+        returnForm.addEventListener('submit', submitReturnRequest);
+    }
+
     window.addEventListener('click', (event) => {
         const returnModal = document.getElementById('returnModal');
         const policyModal = document.getElementById('policyModal');
+        const cancelModal = document.getElementById('cancelModal');
 
-        if (event.target === returnModal) {
-            closeReturnModal();
-        }
-        if (event.target === policyModal) {
-            closePolicyModal();
-        }
+        if (event.target === returnModal) closeReturnModal();
+        if (event.target === policyModal) closePolicyModal();
+        if (event.target === cancelModal) closeCancelModal();
     });
 
-    // Search input enter key
-    document.getElementById('searchInput')?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchOrders();
-        }
-    });
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchOrders();
+            }
+        });
+    }
 }
 
-// Show loading state
 function showLoading() {
     const ordersList = document.getElementById('ordersList');
     if (ordersList) {
@@ -485,12 +514,8 @@ function showLoading() {
     }
 }
 
-// Hide loading state
-function hideLoading() {
-    // Loading state is cleared by displayOrders
-}
+function hideLoading() {}
 
-// Show empty state
 function showEmptyState() {
     const ordersList = document.getElementById('ordersList');
     const emptyOrders = document.getElementById('emptyOrders');
@@ -499,7 +524,6 @@ function showEmptyState() {
     if (emptyOrders) emptyOrders.style.display = 'block';
 }
 
-// Export functions for global use
 window.filterOrders = filterOrders;
 window.requestReturn = requestReturn;
 window.closeReturnModal = closeReturnModal;
@@ -509,3 +533,6 @@ window.closePolicyModal = closePolicyModal;
 window.trackOrder = trackOrder;
 window.reorder = reorder;
 window.searchOrders = searchOrders;
+window.showCancelModal = showCancelModal;
+window.closeCancelModal = closeCancelModal;
+window.confirmCancel = confirmCancel;
