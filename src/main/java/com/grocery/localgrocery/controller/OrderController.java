@@ -54,6 +54,12 @@ public class OrderController {
         public Long userId;
         public String deliveryAddress;
         public List<Item> items;
+        public Double subtotal;
+        public Double tax;
+        public Double shippingFee;
+        public Double total;
+        public String promoCode;
+        public String paymentMethod;
 
         public static class Item {
             public Long productId;
@@ -76,19 +82,25 @@ public class OrderController {
         order.setUser(user);
         order.setDeliveryAddress(req.deliveryAddress.trim());
 
-        // Calculate totals
-        double subtotal = 0;
+        // Calculate totals for validation
+        double calculatedSubtotal = 0;
+        double totalWeight = 0;
         for (PlaceOrderRequest.Item i : req.items) {
             Product p = productRepository.findById(i.productId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
-            subtotal += p.getPrice() * i.quantity;
+            calculatedSubtotal += p.getPrice() * i.quantity;
+            totalWeight += p.getWeightKg() * i.quantity;
         }
 
-        double tax = subtotal * 0.13; // 13% VAT
-        double total = subtotal + tax;
+        // Use frontend-calculated values, but validate they're reasonable
+        double subtotal = req.subtotal != null ? req.subtotal : calculatedSubtotal;
+        double shippingFee = req.shippingFee != null ? req.shippingFee : calculateShippingFee(totalWeight);
+        double tax = req.tax != null ? req.tax : subtotal * 0.13;
+        double total = req.total != null ? req.total : subtotal + tax + shippingFee;
 
         order.setSubtotal(java.math.BigDecimal.valueOf(subtotal));
         order.setTax(java.math.BigDecimal.valueOf(tax));
+        order.setShippingFee(java.math.BigDecimal.valueOf(shippingFee));
         order.setTotal(java.math.BigDecimal.valueOf(total));
 
         order = orderRepository.save(order);
@@ -269,4 +281,13 @@ public class OrderController {
                 "orderId", orderId
         ));
     }
+
+    private double calculateShippingFee(double totalWeight) {
+        // Shipping fee calculation: 100 base + 50 per additional kg
+        // 1kg = 100, 2kg = 150, 3kg = 200, 4kg = 250, etc.
+        if (totalWeight <= 0) return 0;
+        if (totalWeight <= 1) return 100;
+        return 100 + (Math.ceil(totalWeight - 1) * 50);
+    }
 }
+

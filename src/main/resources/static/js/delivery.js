@@ -32,6 +32,10 @@ async function initDeliveryDashboard() {
   // Load earnings summary (default daily)
   await loadEarningsSummary('daily');
 
+  // Load and refresh notifications
+  await loadDeliveryNotifications();
+  setupDeliveryNotificationRefresh();
+
   // Start location sharing if user is online/available
   if (user.isAvailable) {
     startLocationSharing();
@@ -288,46 +292,21 @@ async function showOrderDetails(orderId) {
 // Helper: Build full address string for maps
 function buildFullAddress(order) {
   if (!order) return "";
-  const parts = [
-    order.streetAddress,
-    order.city,
-    order.district,
-    order.province,
-    order.postalCode,
-    order.landmark ? `(${order.landmark})` : ""
-  ].filter(Boolean);
-  return parts.join(", ");
+  // Use the deliveryAddress field from Order entity
+  return order.deliveryAddress || "";
 }
 
 // Helper: Render structured address HTML
 function renderStructuredAddress(order) {
-  const rows = [];
-
-  if (order.recipientName) {
-    rows.push(`<div><strong>Recipient:</strong> ${order.recipientName}</div>`);
-  }
-  if (order.recipientPhone) {
-    rows.push(`<div><strong>Phone:</strong> ${order.recipientPhone}</div>`);
-  }
-  if (order.streetAddress) {
-    rows.push(`<div><strong>Street:</strong> ${order.streetAddress}</div>`);
-  }
-  if (order.city || order.district || order.province) {
-    const line = [order.city, order.district, order.province].filter(Boolean).join(", ");
-    rows.push(`<div><strong>City/District/Province:</strong> ${line}</div>`);
-  }
-  if (order.postalCode) {
-    rows.push(`<div><strong>Postal Code:</strong> ${order.postalCode}</div>`);
-  }
-  if (order.landmark) {
-    rows.push(`<div><strong>Landmark:</strong> ${order.landmark}</div>`);
-  }
-
-  if (rows.length === 0) {
+  if (!order || !order.deliveryAddress) {
     return '<div style="color: var(--text-secondary);">Address not specified</div>';
   }
 
-  return rows.join('');
+  // Display the delivery address as provided by the customer
+  return `<div><strong>Delivery Address:</strong></div>
+          <div style="margin-top: 8px; padding: 12px; background: var(--amazon-dark); border-radius: 6px; border: 1px solid var(--amazon-border);">
+            ${order.deliveryAddress.replace(/\n/g, '<br>')}
+          </div>`;
 }
 
 function renderTimeline(order) {
@@ -819,3 +798,100 @@ window.loadEarningsSummary = loadEarningsSummary;
 window.handleProofUpload = handleProofUpload;
 window.reportIssue = reportIssue;
 window.toggleOnlineStatus = toggleOnlineStatus;
+window.toggleDeliveryNotifications = toggleDeliveryNotifications;
+
+// ===== NOTIFICATION FUNCTIONS =====
+
+let deliveryNotificationsRefreshInterval = null;
+
+async function loadDeliveryNotifications() {
+  try {
+    if (!user || !user.id) return;
+
+    const response = await fetch(`/api/notifications/my?userId=${user.id}`);
+    if (response.ok) {
+      const notificationsData = await response.json();
+      displayDeliveryNotifications(notificationsData);
+    }
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
+}
+
+function displayDeliveryNotifications(notificationsData) {
+  const container = document.getElementById('deliveryPromoNotificationsList');
+  if (!container) return;
+
+  if (!notificationsData || notificationsData.length === 0) {
+    container.innerHTML = '<div style="padding: 12px; color: #999; text-align: center;">No notifications</div>';
+    document.getElementById('deliveryPromoBadge').style.display = 'none';
+    return;
+  }
+
+  // Update badge count
+  const badge = document.getElementById('deliveryPromoBadge');
+  badge.innerText = notificationsData.length;
+  badge.style.display = 'block';
+
+  // Build notification items
+  container.innerHTML = notificationsData.map((item, index) => {
+    const notification = item.notification;
+    const sentAt = formatDeliveryNotificationDate(new Date(item.sentAt));
+
+    return `
+      <div style="padding: 12px 14px; border-bottom: 1px solid #3a4553; cursor: pointer; transition: background 0.2s;"
+           onmouseover="this.style.background='#1a2634';" onmouseout="this.style.background='transparent';">
+        <div style="font-weight: 600; color: #fff; margin-bottom: 4px;">${escapeDeliveryHtml(notification.title)}</div>
+        <div style="font-size: 12px; color: #999; margin-bottom: 4px;">${escapeDeliveryHtml(notification.message)}</div>
+        <div style="font-size: 11px; color: #666;">${sentAt}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatDeliveryNotificationDate(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function setupDeliveryNotificationRefresh() {
+  // Clear any existing interval
+  if (deliveryNotificationsRefreshInterval) {
+    clearInterval(deliveryNotificationsRefreshInterval);
+  }
+
+  // Refresh notifications every 10 seconds
+  deliveryNotificationsRefreshInterval = setInterval(loadDeliveryNotifications, 10000);
+}
+
+function toggleDeliveryNotifications() {
+  const box = document.getElementById('deliveryPromoNotificationsBox');
+  if (box.style.display === 'none' || box.style.display === '') {
+    box.style.display = 'block';
+    loadDeliveryNotifications();
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function escapeDeliveryHtml(text) {
+  if (!text) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}

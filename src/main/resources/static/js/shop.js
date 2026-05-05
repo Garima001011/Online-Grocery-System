@@ -15,6 +15,9 @@ let currentQ = "";
 const TAX_RATE = 0.13;
 let promoDiscountRate = 0; // e.g., 0.10 for 10%
 
+// Notifications
+let notificationsRefreshInterval = null;
+
 init();
 
 async function init() {
@@ -22,6 +25,10 @@ async function init() {
   hydrateFilters();
   await loadProducts();
   renderCart();
+
+  // Load and refresh notifications
+  await loadUserNotifications();
+  setupNotificationRefresh();
 }
 
 async function loadStores() {
@@ -80,14 +87,22 @@ async function loadProducts() {
     const storeName = p.store ? p.store.name : "—";
     const catName = p.category ? p.category.name : "—";
 
+    // Use product image if available
+    const imageHtml = p.imageUrl
+      ? `<img src="${p.imageUrl}" alt="${p.name}" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px; margin-right: 15px;">`
+      : '';
+
     li.innerHTML = `
-      <div>
-        <strong>${p.name}</strong>
-        <div class="meta">${catName} • ${storeName} • Stock: ${p.stock}</div>
-        <div class="meta">Price: Rs. ${formatNpr(p.price)}</div>
+      <div style="display: flex; align-items: center; flex: 1;">
+        ${imageHtml}
+        <div style="flex: 1;">
+          <strong>${p.name}</strong>
+          <div class="meta">${catName} • ${storeName} • Stock: ${p.stock}</div>
+          <div class="meta">Price: Rs. ${formatNpr(p.price)}</div>
+        </div>
       </div>
       <div class="actions">
-        <button ${p.stock <= 0 ? "disabled" : ""} onclick="addToCart(${p.id}, '${escapeQuotes(p.name)}', ${p.price}, ${p.stock}, ${p.store ? p.store.id : "null"})">
+        <button ${p.stock <= 0 ? "disabled" : ""} onclick="addToCart(${p.id}, '${escapeQuotes(p.name)}', ${p.price}, ${p.stock}, ${p.store ? p.store.id : "null"}, '${escapeQuotes(p.imageUrl || '')}', ${p.weightKg || 0})">
           Add
         </button>
       </div>
@@ -96,7 +111,7 @@ async function loadProducts() {
   });
 }
 
-function addToCart(productId, name, price, stock, storeId) {
+function addToCart(productId, name, price, stock, storeId, imageUrl, weightKg) {
   // Standard rule: cart should be from one store at a time (realistic local delivery)
   const cartStoreId = getCartStoreId();
   if (cartStoreId && storeId && cartStoreId !== storeId) {
@@ -112,7 +127,7 @@ function addToCart(productId, name, price, stock, storeId) {
     }
     item.quantity++;
   } else {
-    cart.push({ productId, name, price, quantity: 1, storeId });
+    cart.push({ productId, name, price, quantity: 1, storeId, imageUrl, weightKg: weightKg || 0 });
   }
   saveCart();
 }
@@ -378,4 +393,98 @@ function formatNpr(n) {
 
 function escapeQuotes(s) {
   return (s || "").replace(/'/g, "\\'");
+}
+
+// ===== NOTIFICATION FUNCTIONS =====
+
+async function loadUserNotifications() {
+  try {
+    if (!user || !user.id) return;
+
+    const response = await fetch(`/api/notifications/my?userId=${user.id}`);
+    if (response.ok) {
+      const notificationsData = await response.json();
+      displayNotifications(notificationsData);
+    }
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
+}
+
+function displayNotifications(notificationsData) {
+  const container = document.getElementById('promoNotificationsList');
+  if (!container) return;
+
+  if (!notificationsData || notificationsData.length === 0) {
+    container.innerHTML = '<div style="padding: 12px; color: #999; text-align: center;">No notifications</div>';
+    document.getElementById('promoBadge').style.display = 'none';
+    return;
+  }
+
+  // Update badge count
+  const badge = document.getElementById('promoBadge');
+  badge.innerText = notificationsData.length;
+  badge.style.display = 'block';
+
+  // Build notification items
+  container.innerHTML = notificationsData.map((item, index) => {
+    const notification = item.notification;
+    const sentAt = formatNotificationDate(new Date(item.sentAt));
+
+    return `
+      <div style="padding: 12px 14px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s;"
+           onmouseover="this.style.background='#f5f5f5';" onmouseout="this.style.background='transparent';">
+        <div style="font-weight: 600; color: #333; margin-bottom: 4px;">${escapeHtml(notification.title)}</div>
+        <div style="font-size: 12px; color: #666; margin-bottom: 4px;">${escapeHtml(notification.message)}</div>
+        <div style="font-size: 11px; color: #999;">${sentAt}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function formatNotificationDate(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function setupNotificationRefresh() {
+  // Clear any existing interval
+  if (notificationsRefreshInterval) {
+    clearInterval(notificationsRefreshInterval);
+  }
+
+  // Refresh notifications every 10 seconds
+  notificationsRefreshInterval = setInterval(loadUserNotifications, 10000);
+}
+
+function togglePromoNotifications() {
+  const box = document.getElementById('promoNotificationsBox');
+  if (box.style.display === 'none' || box.style.display === '') {
+    box.style.display = 'block';
+    loadUserNotifications();
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
 }

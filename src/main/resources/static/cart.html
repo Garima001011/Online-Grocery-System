@@ -6,6 +6,54 @@
     <title>Your Cart - Online Grocery System</title>
     <link rel="stylesheet" href="/css/customer.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Additional styles for weight display and animations */
+        .cart-item-weight-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .weight-breakdown {
+            font-size: 11px;
+            color: #888;
+            margin-top: 5px;
+            padding: 5px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .shipping-info {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+
+        .shipping-info i {
+            color: #4CAF50;
+            margin-right: 5px;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .weight-column {
+            width: 80px;
+            text-align: center;
+            font-size: 13px;
+            color: #555;
+        }
+    </style>
 </head>
 <body>
 <!-- Amazon-like Header -->
@@ -52,6 +100,16 @@
                 </div>
             </div>
 
+            <!-- Shipping Information Notice -->
+            <div class="shipping-info" style="margin-top: 20px;">
+                <i class="fas fa-truck"></i>
+                <strong>Shipping Policy:</strong>
+                Base fee Rs. 100 for first 1kg, +Rs. 50 for each additional kg
+                <br><small style="display: block; margin-top: 5px;">
+                <i class="fas fa-info-circle"></i> Example: 1kg = Rs. 100, 2kg = Rs. 150, 3kg = Rs. 200, etc.
+            </small>
+            </div>
+
             <!-- Recommended Items -->
             <div class="suggestions-section" style="margin-top: 30px;">
                 <h3 class="section-title">Frequently bought together</h3>
@@ -66,29 +124,45 @@
             <div class="checkout-summary">
                 <h3 class="summary-title">Order Summary</h3>
 
+                <!-- Weight Summary Section -->
+                <div class="summary-row" id="weightSummary" style="flex-direction: column; align-items: flex-start; padding: 10px 0;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 5px;">
+                        <span><i class="fas fa-weight-hanging"></i> Total Weight:</span>
+                        <span id="totalWeightDisplay">0.00 kg</span>
+                    </div>
+                    <div id="weightInfo" style="font-size: 12px; color: #666; width: 100%;">
+                        <!-- Weight details will appear here -->
+                    </div>
+                </div>
+
                 <div class="summary-row">
                     <span>Items (<span id="itemCount">0</span>):</span>
-                    <span id="itemsSubtotal">Rs. 0</span>
+                    <span id="itemsSubtotal">Rs. 0.00</span>
+                </div>
+
+                <div class="summary-row" style="border-top: 1px solid #ddd; padding-top: 10px;">
+                    <span><i class="fas fa-truck"></i> Shipping & Delivery:</span>
+                    <span id="shippingFee">Rs. 0.00</span>
+                </div>
+
+                <!-- Shipping Breakdown (detailed) -->
+                <div id="shippingBreakdown" style="display: none; font-size: 11px; color: #666; margin: 5px 0 10px 0; padding: 8px; background: #f8f9fa; border-radius: 4px;">
+                    <!-- Shipping calculation details will appear here -->
                 </div>
 
                 <div class="summary-row">
-                    <span>Shipping & Delivery:</span>
-                    <span>Rs. 50</span>
-                </div>
-
-                <div class="summary-row">
-                    <span>Tax (13%):</span>
-                    <span id="taxAmount">Rs. 0</span>
+                    <span>Tax (13% VAT):</span>
+                    <span id="taxAmount">Rs. 0.00</span>
                 </div>
 
                 <div class="summary-row">
                     <span>Promo Discount:</span>
-                    <span id="promoDiscount">- Rs. 0</span>
+                    <span id="promoDiscount">- Rs. 0.00</span>
                 </div>
 
                 <div class="summary-row summary-total">
                     <span>Order Total:</span>
-                    <span id="orderTotal">Rs. 0</span>
+                    <span id="orderTotal">Rs. 0.00</span>
                 </div>
 
                 <!-- Promo Code -->
@@ -105,7 +179,9 @@
 
                 <!-- Delivery Address -->
                 <div style="margin: 20px 0;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Delivery Address</label>
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">
+                        <i class="fas fa-map-marker-alt"></i> Delivery Address
+                    </label>
                     <textarea id="deliveryAddress" rows="3" placeholder="Enter your complete delivery address" style="width: 100%; padding: 10px; border: 1px solid var(--amazon-border); border-radius: 4px;"></textarea>
                 </div>
 
@@ -115,11 +191,11 @@
                     <div style="margin-bottom: 10px;">
                         <label style="display: block; margin-bottom: 8px;">
                             <input type="radio" name="payment" value="COD" checked>
-                            Cash on Delivery
+                            <i class="fas fa-money-bill-wave"></i> Cash on Delivery
                         </label>
                         <label style="display: block;">
                             <input type="radio" name="payment" value="CARD">
-                            Credit/Debit Card
+                            <i class="fas fa-credit-card"></i> Credit/Debit Card
                         </label>
                     </div>
 
@@ -134,7 +210,7 @@
                 </div>
 
                 <button class="checkout-btn" id="checkoutBtn" onclick="placeOrder()">
-                    Proceed to Checkout
+                    <i class="fas fa-shopping-cart"></i> Proceed to Checkout
                 </button>
 
                 <div style="margin-top: 15px; text-align: center; font-size: 14px; color: #565959;">

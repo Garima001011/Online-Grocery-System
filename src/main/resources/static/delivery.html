@@ -629,6 +629,77 @@
     </div>
 
     <nav class="header-nav">
+        <!-- Notifications Bell -->
+        <div class="nav-item" style="position: relative;">
+            <div
+                    id="deliveryPromoBell"
+                    onclick="toggleDeliveryNotifications()"
+                    style="cursor: pointer; display: flex; align-items: center; gap: 8px;"
+                    title="Notifications"
+            >
+                <div style="position: relative; font-size: 22px;">
+                    <i class="fas fa-bell"></i>
+                    <span
+                            id="deliveryPromoBadge"
+                            style="
+              display: none;
+              position: absolute;
+              top: -6px;
+              right: -8px;
+              background: #d93025;
+              color: #fff;
+              border-radius: 999px;
+              padding: 2px 6px;
+              font-size: 11px;
+              line-height: 1;
+              min-width: 18px;
+              text-align: center;
+            "
+                    >0</span>
+                </div>
+                <div style="font-weight: bold;">Alerts</div>
+            </div>
+
+            <!-- Dropdown box -->
+            <div
+                    id="deliveryPromoNotificationsBox"
+                    style="
+          display: none;
+          position: absolute;
+          right: 0;
+          top: 42px;
+          width: 340px;
+          background: #131921;
+          border: 1px solid #3a4553;
+          border-radius: 10px;
+          box-shadow: 0 12px 30px rgba(0,0,0,.15);
+          z-index: 2500;
+          overflow: hidden;
+        "
+            >
+                <div
+                        style="
+            padding: 12px 14px;
+            border-bottom: 1px solid #3a4553;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #1a2634;
+          "
+                >
+                    <div style="font-weight: 800;">Notifications</div>
+                    <div style="font-size: 12px; color: #999;">Updates</div>
+                </div>
+
+                <div
+                        id="deliveryPromoNotificationsList"
+                        style="max-height: 360px; overflow: auto;"
+                >
+                    <div style="padding: 12px; color: #999;">Loading...</div>
+                </div>
+            </div>
+        </div>
+
         <div class="nav-item">
             <div style="font-size: 12px;">Performance Badge</div>
             <div style="font-weight: bold;">

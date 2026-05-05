@@ -321,6 +321,7 @@ public class AdminController {
             @RequestParam("categoryId") Long categoryId,
             @RequestParam("storeId") Long storeId,
             @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "weightKg", required = false, defaultValue = "0.0") Double weightKg,
             @RequestParam(value = "image", required = false) MultipartFile image
     ) {
         // Save image and get URL (store in local folder)
@@ -367,6 +368,9 @@ public class AdminController {
             }
             if (imageUrl != null) {
                 product.setImageUrl(imageUrl);
+            }
+            if (weightKg != null && weightKg > 0) {
+                product.setWeightKg(weightKg);
             }
 
             productRepository.save(product);
@@ -593,3 +597,4 @@ public class AdminController {
         return stats;
     }
 }
+

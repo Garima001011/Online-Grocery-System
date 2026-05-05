@@ -34,6 +34,9 @@ public class Product {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "weight_kg")
+    private double weightKg;
+
     public Product() {}
 
     // Getters and setters
@@ -45,6 +48,7 @@ public class Product {
     public Store getStore() { return store; }
     public String getDescription() { return description; }
     public String getImageUrl() { return imageUrl; }
+    public double getWeightKg() { return weightKg; }
 
     public void setName(String name) { this.name = name; }
     public void setPrice(double price) { this.price = price; }
@@ -53,4 +57,5 @@ public class Product {
     public void setStore(Store store) { this.store = store; }
     public void setDescription(String description) { this.description = description; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setWeightKg(double weightKg) { this.weightKg = weightKg; }
 }

@@ -55,12 +55,22 @@ public class ProductController {
         return all;
     }
 
+    // Get single product by ID (ADD THIS IF MISSING)
+    @GetMapping("/{id}")
+    public Product getById(@PathVariable Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+    }
+
     public static class CreateProductRequest {
         public String name;
         public double price;
         public int stock;
         public Long categoryId;
         public Long storeId;
+        public double weightKg;  // ✅ ADD THIS FIELD
+        public String description;  // ✅ Optional: add description
+        public String imageUrl;     // ✅ Optional: add image URL
     }
 
     @PostMapping
@@ -91,8 +101,55 @@ public class ProductController {
         p.setName(req.name.trim());
         p.setPrice(req.price);
         p.setStock(req.stock);
+        p.setWeightKg(req.weightKg);  // ✅ ADD THIS LINE
         p.setCategory(category);
-        p.setStore(store); // IMPORTANT
+        p.setStore(store);
+
+        // Optional fields
+        if (req.description != null) {
+            p.setDescription(req.description);
+        }
+        if (req.imageUrl != null) {
+            p.setImageUrl(req.imageUrl);
+        }
+
+        return productRepository.save(p);
+    }
+
+    // ✅ ADD UPDATE endpoint for editing products (including weight)
+    @PutMapping("/{id}")
+    public Product update(@PathVariable Long id, @RequestBody CreateProductRequest req) {
+        Product p = productRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+
+        if (req.name != null && !req.name.trim().isEmpty()) {
+            p.setName(req.name.trim());
+        }
+        if (req.price >= 0) {
+            p.setPrice(req.price);
+        }
+        if (req.stock >= 0) {
+            p.setStock(req.stock);
+        }
+        if (req.weightKg > 0) {
+            p.setWeightKg(req.weightKg);  // ✅ ADD WEIGHT UPDATE
+        }
+        if (req.description != null) {
+            p.setDescription(req.description);
+        }
+        if (req.imageUrl != null) {
+            p.setImageUrl(req.imageUrl);
+        }
+        if (req.categoryId != null) {
+            Category category = categoryRepository.findById(req.categoryId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Category not found"));
+            p.setCategory(category);
+        }
+        if (req.storeId != null) {
+            Store store = storeRepository.findById(req.storeId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Store not found"));
+            p.setStore(store);
+        }
 
         return productRepository.save(p);
     }

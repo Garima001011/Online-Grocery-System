@@ -35,6 +35,9 @@ public class Order {
     private BigDecimal tax;
 
     @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal shippingFee;
+
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal total;
 
     private String promoCode;
@@ -88,6 +91,7 @@ public class Order {
         this.status = "PLACED";
         this.subtotal = BigDecimal.ZERO;
         this.tax = BigDecimal.ZERO;
+        this.shippingFee = BigDecimal.ZERO;
         this.total = BigDecimal.ZERO;
         this.paymentMethod = "COD";
         this.paymentStatus = "PENDING";
@@ -101,6 +105,7 @@ public class Order {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public BigDecimal getSubtotal() { return subtotal; }
     public BigDecimal getTax() { return tax; }
+    public BigDecimal getShippingFee() { return shippingFee; }
     public BigDecimal getTotal() { return total; }
     public String getPromoCode() { return promoCode; }
     public String getPaymentMethod() { return paymentMethod; }
@@ -126,6 +131,7 @@ public class Order {
     public void setStatus(String status) { this.status = status; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }
     public void setTax(BigDecimal tax) { this.tax = tax; }
+    public void setShippingFee(BigDecimal shippingFee) { this.shippingFee = shippingFee; }
     public void setTotal(BigDecimal total) { this.total = total; }
     public void setPromoCode(String promoCode) { this.promoCode = promoCode; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }

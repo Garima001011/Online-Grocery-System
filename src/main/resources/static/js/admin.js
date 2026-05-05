@@ -637,6 +637,7 @@ async function addProduct() {
     const stock = parseInt(document.getElementById('productStock').value);
     const categoryId = document.getElementById('productCategory').value;
     const storeId = document.getElementById('productStore').value;
+    const weight = parseFloat(document.getElementById('productWeight').value) || 0;
     const description = document.getElementById('productDescription').value.trim();
     const imageFile = document.getElementById('productImage').files[0];
 
@@ -653,6 +654,7 @@ async function addProduct() {
     formData.append('stock', stock);
     formData.append('categoryId', categoryId);
     formData.append('storeId', storeId);
+    formData.append('weightKg', weight);
     if (description) {
         formData.append('description', description);
     }
@@ -674,6 +676,7 @@ async function addProduct() {
             document.getElementById('productName').value = '';
             document.getElementById('productPrice').value = '';
             document.getElementById('productStock').value = '';
+            document.getElementById('productWeight').value = '';
             document.getElementById('productDescription').value = '';
             document.getElementById('productImage').value = '';
             document.getElementById('productImagePreview').innerHTML = '';

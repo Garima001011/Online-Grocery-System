@@ -328,10 +328,15 @@ function displayProducts(productsToDisplay) {
       product.stock < 10 ? `<div class="product-badge">Low Stock</div>` : "";
     const icon = getCategoryIcon(product.category?.name);
 
+    // Use product image if available, otherwise fallback to category icon
+    const imageHtml = product.imageUrl
+      ? `<img src="${product.imageUrl}" alt="${product.name}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 4px;">`
+      : `<i class="${icon}" style="font-size: 60px; color: #ddd;"></i>`;
+
     productCard.innerHTML = `
       ${badge}
-      <div style="text-align: center;">
-        <i class="${icon}" style="font-size: 60px; color: #ddd;"></i>
+      <div style="text-align: center; position: relative; height: 200px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border-radius: 4px; overflow: hidden;">
+        ${imageHtml}
       </div>
       <h3 class="product-title">${product.name}</h3>
       <div class="product-price">
@@ -379,12 +384,16 @@ function loadSuggestions() {
 
   suggestionsGrid.innerHTML = "";
   suggestedProducts.forEach((product) => {
+    const icon = getCategoryIcon(product.category?.name);
+    // Use product image if available, otherwise fallback to category icon
+    const imageHtml = product.imageUrl
+      ? `<img src="${product.imageUrl}" alt="${product.name}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px;">`
+      : `<i class="${icon}" style="font-size: 40px; color: #ddd;"></i>`;
+
     suggestionsGrid.innerHTML += `
       <div class="product-card">
-        <div style="text-align: center;">
-          <i class="${getCategoryIcon(
-            product.category?.name
-          )}" style="font-size: 40px; color: #ddd;"></i>
+        <div style="text-align: center; height: 120px; display: flex; align-items: center; justify-content: center; background: #f5f5f5; border-radius: 4px; overflow: hidden;">
+          ${imageHtml}
         </div>
         <h4 style="font-size: 14px; margin: 10px 0; height: 40px; overflow: hidden;">${
           product.name
@@ -423,7 +432,9 @@ function addToCart(productId) {
       name: product.name,
       price: product.price,
       quantity: 1,
-      storeId: product.store?.id
+      storeId: product.store?.id,
+      imageUrl: product.imageUrl,
+      weightKg: product.weightKg || 0
     });
   }
 
