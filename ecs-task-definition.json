@@ -1,0 +1,36 @@
+{
+  "family": "online-grocery-system-task",
+  "networkMode": "awsvpc",
+  "executionRoleArn": "arn:aws:iam::961832993963:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "online-grocery-system",
+      "image": "961832993963.dkr.ecr.us-east-1.amazonaws.com/online-grocery-system:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "SPRING_PROFILES_ACTIVE",
+          "value": "prod"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/online-grocery-system",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024"
+}
